@@ -1,7 +1,8 @@
 #version 420 core
 
-in layout(location = 0) vec3 position;
+in layout(location = 0) ivec2 scalarFieldCoords;
 
 void main() {
-  gl_Position = vec4(position, 1.f);
+  // Store coordinates in gl_Position.xy
+  gl_Position = vec4(scalarFieldCoords, 0.f, 1.f);
 }

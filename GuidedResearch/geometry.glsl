@@ -1,9 +1,9 @@
 #version 420 core
 
 layout (points) in;
-layout (line_strip, max_vertices = 2) out;
+layout (line_strip, max_vertices = 4) out;
 
-uniform sampler2D scalarField;
+layout (binding = 0, r32f) uniform image2D scalarField;
 
 void main() {
   gl_Position = gl_in[0].gl_Position;
