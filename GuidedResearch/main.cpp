@@ -37,7 +37,7 @@ int main() {
 	glViewport(0, 0, width, height);
 
 	// Setup shaders
-	Shader shader("vert.glsl", "frag.glsl", "geometry.glsl");
+	Shader shader("vert.glsl", "frag.glsl", "");
 	// Check some OpenGL capabilities
 	GLint value;
 	glGetIntegerv(GL_MAX_GEOMETRY_IMAGE_UNIFORMS, &value);
@@ -50,7 +50,7 @@ int main() {
 	GLfloat* scalarField = 0;
 	GLint* fieldCoords = 0;
 	GLint fieldCoordsSize;
-	generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -2, 3, 2, fieldCoords, fieldCoordsSize);
+	generateScalarField(scalarField, fieldWidth, fieldHeight, -4, -4, 4, 4, fieldCoords, fieldCoordsSize);
 
 	// Check scalar field coords
 	/*for (int i = fieldCoordsSize - 1; i > fieldCoordsSize - 20; i--) {
@@ -61,10 +61,22 @@ int main() {
 		cout << scalarField[i] << ", ";
 	}*/
 
+	GLfloat triangleStrip[] {
+		// x, y		// u, v
+		-1.f, -1.f, 0.f, 0.f, // bottom left
+		-1.f, 1.f, 0.f, 1.f, // top left
+		1.f, -1.f, 1.f, 0.f, // bottom right
+		1.f, 1.f, 1.f, 1.f // top right
+	};
+
 	// Store scalar field into a texture
 	GLuint scalarFieldTex;
 	glGenTextures(1, &scalarFieldTex);
 	glBindTexture(GL_TEXTURE_2D, scalarFieldTex);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, fieldWidth, fieldHeight, 0, GL_RED, GL_FLOAT, scalarField);
 	glBindImageTexture(0, scalarFieldTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -73,6 +85,7 @@ int main() {
 	// Set uniforms
 	shader.Use();
 	glUniform1i(glGetUniformLocation(shader.Program, "scalarField"), 0); // image unit 0
+	glUniform1i(glGetUniformLocation(shader.Program, "scalarFieldTex"), 0); // texture unit 0
 	glUniform1f(glGetUniformLocation(shader.Program, "isoValue"), .5f);
 
 	// Points to render
@@ -86,11 +99,17 @@ int main() {
 	glGenVertexArrays(1, &VAO);
 	// Bind data
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, fieldCoordsSize * sizeof(GLint), fieldCoords, GL_STATIC_DRAW);
+	/*glBufferData(GL_ARRAY_BUFFER, fieldCoordsSize * sizeof(GLint), fieldCoords, GL_STATIC_DRAW);
 	// Setup vertex array
 	glBindVertexArray(VAO);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_INT, GL_FALSE, 2 * sizeof(GLint), 0);
+	glVertexAttribPointer(0, 2, GL_INT, GL_FALSE, 2 * sizeof(GLint), 0);*/
+	glBufferData(GL_ARRAY_BUFFER, sizeof(triangleStrip), triangleStrip, GL_STATIC_DRAW);
+	glBindVertexArray(VAO);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (GLvoid*)(2 * sizeof(GLfloat)));
 	glBindVertexArray(0);
 
 
@@ -102,9 +121,9 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		shader.Use();
-		//glBindTexture(GL_TEXTURE_2D, scalarFieldTex);
+		glBindTexture(GL_TEXTURE_2D, scalarFieldTex);
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_POINTS, 0, fieldCoordsSize);
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 		glBindVertexArray(0);
 
 		glfwSwapBuffers(window);

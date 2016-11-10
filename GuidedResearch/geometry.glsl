@@ -1,10 +1,16 @@
 #version 420 core
 
-layout (points) in;
-layout (line_strip, max_vertices = 4) out;
+layout (triangles) in;
+layout (triangle_strip, max_vertices = 3) out;
 
 layout (binding = 0, r32f) uniform image2D scalarField;
 uniform float isoValue;
+
+in VS_OUT {
+  vec2 texCoords;
+} gs_in[];
+
+out vec2 texCoords;
 
 /**
   Emit a vertex between the two edge points p1 and p2 of the currently
@@ -14,19 +20,25 @@ uniform float isoValue;
   Parameters are the world space position of p1 and p2, their intensities,
   and the iso value of the current contour line.
  */
-void emit(vec2 p1_NDCposition, vec2 p2_NDCposition,
+/*void emit(vec2 p1_NDCposition, vec2 p2_NDCposition,
           float p1_intensity, float p2_intensity, float isoValue)
 {
   float fraction = (isoValue - p1_intensity) / (p2_intensity - p1_intensity);
   vec2 vertex_NDCposition = mix(p1_NDCposition, p2_NDCposition, fraction);
   vec4(vertex_NDCposition, 0.f, 1.f);
   EmitVertex();
-}
+}*/
 
 void main() {
+  for (int i = 0; i < gl_in.length(); i++) {
+      gl_Position = gl_in[i].gl_Position;
+      texCoords = gs_in[i].texCoords;
+      EmitVertex();
+  }
+  EndPrimitive();
   // gl_Position.xy encodes the i and j grid indices of the upper left corner
   // of the grid cell processed by this shader instance.
-  ivec2 ul = ivec2(gl_in[0].gl_Position.xy);
+  /*ivec2 ul = ivec2(gl_in[0].gl_Position.xy);
   ivec2 ur = ul + ivec2(1, 0);
   ivec2 ll = ul + ivec2(0, 1);
   ivec2 lr = ur + ivec2(0, 1);
@@ -105,6 +117,6 @@ void main() {
       emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
       emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
       EndPrimitive();
-  }
+  }*/
 
 }

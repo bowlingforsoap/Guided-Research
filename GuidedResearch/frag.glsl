@@ -1,7 +1,12 @@
 #version 420 core
 
+in VS_OUT {
+  vec2 texCoords;
+} fs_in;
 out vec4 color;
 
+uniform sampler2D scalarFieldTex;
+
 void main() {
-  color = vec4(0.f, 1.f, .4f, 1.f);
+  color = texture(scalarFieldTex, fs_in.texCoords);
 }
