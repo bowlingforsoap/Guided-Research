@@ -7,7 +7,7 @@
 scalarField:[[minX, maxX], [minY, maxY]]
 fieldCoords:[[0, width - 2], [0, height - 2]]
 */
-void generateScalarField(GLfloat* scalarField, GLint width, GLint height, GLfloat minX, GLfloat minY, GLfloat maxX, GLfloat maxY, GLint* fieldCoords, GLint &fieldCoordsSize) {
+void generateScalarField(GLfloat* &scalarField, GLint width, GLint height, GLfloat minX, GLfloat minY, GLfloat maxX, GLfloat maxY, GLint* &fieldCoords, GLint &fieldCoordsSize) {
 	scalarField = new GLfloat[width * height];
 	float xDelta = abs(maxX - minX) / width;
 	float yDelta = abs(maxY - minY) / height;
@@ -23,10 +23,10 @@ void generateScalarField(GLfloat* scalarField, GLint width, GLint height, GLfloa
 	fieldCoordsSize = (width - 1) * (height - 1) * 2;
 	fieldCoords = new GLint[fieldCoordsSize];
 	int i = 0;
-	while (i < fieldCoordsSize) {
-		fieldCoords[i] = i / (height - 1);
-		fieldCoords[i + 1] = i % (height - 1);
-		i = i + 2;
+	while (i < (width - 1) * (height - 1)) {
+		fieldCoords[i * 2] = i / (height - 1);
+		fieldCoords[i * 2 + 1] = i % (height - 1);
+		i = i++;
 	}
 }
 
@@ -51,6 +51,16 @@ int main() {
 	GLint* fieldCoords = 0;
 	GLint fieldCoordsSize;
 	generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -2, 3, 2, fieldCoords, fieldCoordsSize);
+
+	// Check scalar field coords
+	/*for (int i = fieldCoordsSize - 1; i > fieldCoordsSize - 20; i--) {
+		cout << scalarField[i] << ", ";
+	}
+	cout << endl;
+	for (int i = 0; i < 20; i++) {
+		cout << scalarField[i] << ", ";
+	}*/
+
 	// Store scalar field into a texture
 	GLuint scalarFieldTex;
 	glGenTextures(1, &scalarFieldTex);
@@ -58,11 +68,12 @@ int main() {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, fieldWidth, fieldHeight, 0, GL_RED, GL_FLOAT, scalarField);
 	glBindImageTexture(0, scalarFieldTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	cout << glGetError() << endl;
+	//cout << glGetError() << endl;
 	delete[] scalarField;
-	// Set image uniform
+	// Set uniforms
 	shader.Use();
-	glUniform1i(glGetUniformLocation(shader.Program, "scalarField"), 0);
+	glUniform1i(glGetUniformLocation(shader.Program, "scalarField"), 0); // image unit 0
+	glUniform1f(glGetUniformLocation(shader.Program, "isoValue"), .5f);
 
 	// Points to render
 	GLfloat points[] {
@@ -70,7 +81,6 @@ int main() {
 	};
 
 	// Setup attributes
-	//
 	GLuint VAO, VBO;
 	glGenBuffers(1, &VBO);
 	glGenVertexArrays(1, &VAO);
