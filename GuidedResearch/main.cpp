@@ -2,7 +2,12 @@
 #include <util/Shader.h>
 #include <SOIL.h>
 
-void generateScalarField(GLfloat* scalarField, GLint* fieldCoords, GLint width, GLint height, GLfloat minX, GLfloat minY, GLfloat maxX, GLfloat maxY) {
+// Generates scalar field (which can be placed in a texture) and texture coordinates for it
+/*
+scalarField:[[minX, maxX], [minY, maxY]]
+fieldCoords:[[0, width - 2], [0, height - 2]]
+*/
+void generateScalarField(GLfloat* scalarField, GLint width, GLint height, GLfloat minX, GLfloat minY, GLfloat maxX, GLfloat maxY, GLint* fieldCoords, GLint &fieldCoordsSize) {
 	scalarField = new GLfloat[width * height];
 	float xDelta = abs(maxX - minX) / width;
 	float yDelta = abs(maxY - minY) / height;
@@ -14,12 +19,13 @@ void generateScalarField(GLfloat* scalarField, GLint* fieldCoords, GLint width, 
 		}
 	}
 
-	// Fill fieldCoords
-	fieldCoords = new GLint[width * height * 2];
+	// Fill fieldCoords: coordinates of the upper left corner of each square in context of marching squares
+	fieldCoordsSize = (width - 1) * (height - 1) * 2;
+	fieldCoords = new GLint[fieldCoordsSize];
 	int i = 0;
-	while (i < width * height * 2) {
-		fieldCoords[i] = i / height;
-		fieldCoords[i + 1] = i % height;
+	while (i < fieldCoordsSize) {
+		fieldCoords[i] = i / (height - 1);
+		fieldCoords[i + 1] = i % (height - 1);
 		i = i + 2;
 	}
 }
@@ -32,16 +38,19 @@ int main() {
 
 	// Setup shaders
 	Shader shader("vert.glsl", "frag.glsl", "geometry.glsl");
-	// Check the number of image units available
-	GLint numUniforms;
-	glGetIntegerv(GL_MAX_GEOMETRY_IMAGE_UNIFORMS, &numUniforms);
-	cout << "GL_MAX_GEOMETRY_IMAGE_UNIFORMS: " << numUniforms;
+	// Check some OpenGL capabilities
+	GLint value;
+	glGetIntegerv(GL_MAX_GEOMETRY_IMAGE_UNIFORMS, &value);
+	cout << "GL_MAX_GEOMETRY_IMAGE_UNIFORMS: " << value << endl;
+	glGetIntegerv(GL_MAX_COMPUTE_SHARED_MEMORY_SIZE, &value);
+	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
 
 	// Scalar Field setup
 	GLint fieldWidth = 100, fieldHeight = 100;
 	GLfloat* scalarField = 0;
 	GLint* fieldCoords = 0;
-	generateScalarField(scalarField, fieldCoords, fieldWidth, fieldHeight, -3, -2, 3, 2);
+	GLint fieldCoordsSize;
+	generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -2, 3, 2, fieldCoords, fieldCoordsSize);
 	// Store scalar field into a texture
 	GLuint scalarFieldTex;
 	glGenTextures(1, &scalarFieldTex);
@@ -67,7 +76,7 @@ int main() {
 	glGenVertexArrays(1, &VAO);
 	// Bind data
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, width * height * 2 * sizeof(GLint), fieldCoords, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, fieldCoordsSize * sizeof(GLint), fieldCoords, GL_STATIC_DRAW);
 	// Setup vertex array
 	glBindVertexArray(VAO);
 	glEnableVertexAttribArray(0);
@@ -85,7 +94,7 @@ int main() {
 		shader.Use();
 		//glBindTexture(GL_TEXTURE_2D, scalarFieldTex);
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_POINTS, 0, width * height);
+		glDrawArrays(GL_POINTS, 0, fieldCoordsSize);
 		glBindVertexArray(0);
 
 		glfwSwapBuffers(window);
