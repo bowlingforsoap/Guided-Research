@@ -19,7 +19,7 @@ void emit(vec2 p1_NDCposition, vec2 p2_NDCposition,
 {
   float fraction = (isoValue - p1_intensity) / (p2_intensity - p1_intensity);
   vec2 vertex_NDCposition = mix(p1_NDCposition, p2_NDCposition, fraction);
-  vec4(vertex_NDCposition, 0.f, 1.f);
+  gl_Position = vec4(vertex_NDCposition, 0.f, 1.f);
   EmitVertex();
 }
 
