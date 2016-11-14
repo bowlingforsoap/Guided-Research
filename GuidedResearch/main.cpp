@@ -87,6 +87,8 @@ int main() {
 	glUniform1i(glGetUniformLocation(shader.Program, "scalarField"), 0); // image unit 0
 	glUniform1i(glGetUniformLocation(shader.Program, "scalarFieldTex"), 0); // texture unit 0
 	glUniform1f(glGetUniformLocation(shader.Program, "isoValue"), .5f);
+	//glUniform1i(glGetUniformLocation(shader.Program, "width"), width);
+	//glUniform1i(glGetUniformLocation(shader.Program, "height"), height);
 
 	// Points to render
 	GLfloat points[] {
