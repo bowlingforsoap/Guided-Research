@@ -11,7 +11,6 @@ void generateScalarField(GLfloat* &scalarField, GLint width, GLint height, GLflo
 	scalarField = new GLfloat[width * height];
 	float xDelta = abs(maxX - minX) / width;
 	float yDelta = abs(maxY - minY) / height;
-
 	// Fill scalar field with f:sin(x)*cos(x)
 	for (int i = 0; i < width; i++) {
 		for (int j = 0; j < height; j++) {
@@ -57,22 +56,29 @@ int main() {
 	generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -2, 3, 2, fieldCoords, fieldCoordsSize);
 
 	// Check scalar field coords
-	/*cout << "\nScalar field:" << endl;
-	for (int i = fieldCoordsSize - 1; i > fieldCoordsSize - 20; i--) {
+	cout << "\nScalar field:" << endl;
+	for (int i = 0; i < 20; i++) {
 		cout << scalarField[i] << ", ";
 	}
 	cout << endl;
-	for (int i = 0; i < 20; i++) {
+	cout << "\nScalar field end:" << endl;
+	for (int i = fieldWidth * fieldHeight - 1; i > (fieldWidth * fieldHeight - 1) - 20; i--) {
 		cout << scalarField[i] << ", ";
 	}
 	cout << endl << "\nField coords:" << endl;
-	for (int i = fieldCoordsSize - 1; i > fieldCoordsSize - 20; i--) {
+	for (int i = 0; i < 20; i++) {
 		cout << fieldCoords[i] << ", ";
 	}
 	cout << endl;
-	for (int i = 0; i < 20; i++) {
+	cout << "\nField coords end:" << endl;
+	for (int i = fieldCoordsSize - 1; i > fieldCoordsSize - 20; i--) {
 		cout << fieldCoords[i] << ", ";
-	}*/
+	}
+
+	// Set uniforms
+	shader.Use();
+	glUniform1i(glGetUniformLocation(shader.Program, "scalarField"), 0); // image unit 0
+	glUniform1f(glGetUniformLocation(shader.Program, "isoValue"), scalarField[rand() % (fieldWidth * fieldHeight - 1)]);
 
 	// Store scalar field into a texture
 	GLuint scalarFieldTex;
@@ -83,10 +89,6 @@ int main() {
 	glBindTexture(GL_TEXTURE_2D, 0);
 	//cout << glGetError() << endl;
 	delete[] scalarField;
-	// Set uniforms
-	shader.Use();
-	glUniform1i(glGetUniformLocation(shader.Program, "scalarField"), 0); // image unit 0
-	glUniform1f(glGetUniformLocation(shader.Program, "isoValue"), .5f);
 
 	// Setup attributes
 	GLuint VAO, VBO;

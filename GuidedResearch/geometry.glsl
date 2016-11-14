@@ -23,6 +23,18 @@ void emit(vec2 p1_NDCposition, vec2 p2_NDCposition,
   EmitVertex();
 }
 
+void test() {
+  gl_Position = vec4(-.3f, -.3f, 0.f, 1.f);
+  EmitVertex();
+  gl_Position = vec4(-.3f, .3f, 0.f, 1.f);
+  EmitVertex();
+  gl_Position = vec4(.3f, .3f, 0.f, 1.f);
+  EmitVertex();
+  gl_Position = vec4(-.3f, -.3f, 0.f, 1.f);
+  EmitVertex();
+  EndPrimitive();
+}
+
 void main() {
   // gl_Position.xy encodes the i and j grid indices of the upper left corner
   // of the grid cell processed by this shader instance.
@@ -30,6 +42,7 @@ void main() {
   ivec2 ur = ul + ivec2(1, 0);
   ivec2 ll = ul + ivec2(0, 1);
   ivec2 lr = ur + ivec2(0, 1);
+
 
   // Load the scalar values at the four corner points of the grid cell.
   float ul_intensity = imageLoad(scalarField, ul).r;
@@ -39,10 +52,10 @@ void main() {
 
   // .. and the NDC coordinates of these corner points.
   // TODO: unhardcore 100
-  vec2 ul_NDCposition = ((ul - vec2(0)) / (vec2(100) - vec2(0)) - .5f) * 2;
-  vec2 ur_NDCposition = ((ur - vec2(0)) / (vec2(100) - vec2(0)) - .5f) * 2;
-  vec2 ll_NDCposition = ((ll - vec2(0)) / (vec2(100) - vec2(0)) - .5f) * 2;
-  vec2 lr_NDCposition = ((lr - vec2(0)) / (vec2(100) - vec2(0)) - .5f) * 2;
+  vec2 ul_NDCposition = ((ul - vec2(0)) / (vec2(100) - vec2(0)) - vec2(.5f)) * 2.f;
+  vec2 ur_NDCposition = ((ur - vec2(0)) / (vec2(100) - vec2(0)) - vec2(.5f)) * 2.f;
+  vec2 ll_NDCposition = ((ll - vec2(0)) / (vec2(100) - vec2(0)) - vec2(.5f)) * 2.f;
+  vec2 lr_NDCposition = ((lr - vec2(0)) / (vec2(100) - vec2(0)) - vec2(.5f)) * 2.f;
 
   // Determine the marching squares case we are handling..
   int bitfield = 0;
@@ -50,6 +63,11 @@ void main() {
   bitfield += int(lr_intensity < isoValue) * 2;
   bitfield += int(ul_intensity < isoValue) * 4;
   bitfield += int(ur_intensity < isoValue) * 8;
+
+  if (bitfield != 15 && bitfield != 0) {
+    test();
+  }
+
   // ..use symmetry.
   if (bitfield > 7)
   {
