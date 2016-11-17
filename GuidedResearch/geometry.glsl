@@ -1,10 +1,10 @@
 #version 420 core
 
 layout (points) in;
-layout (line_strip, max_vertices = 4) out;
+layout (line_strip, max_vertices = 12) out;
 
 layout (binding = 0, r32f) uniform image2D scalarField;
-uniform float isoValue;
+uniform vec3 isoValue;
 
 /**
   Emit a vertex between the two edge points p1 and p2 of the currently
@@ -23,16 +23,82 @@ void emit(vec2 p1_NDCposition, vec2 p2_NDCposition,
   EmitVertex();
 }
 
-void test() {
-  gl_Position = vec4(-.3f, -.3f, 0.f, 1.f);
+void test(vec2 center, float size) {
+  gl_Position = vec4(center.x - size, center.y - size, 0.f, 1.f);
   EmitVertex();
-  gl_Position = vec4(-.3f, .3f, 0.f, 1.f);
+  gl_Position = vec4(center.x - size, center.y + size, 0.f, 1.f);
   EmitVertex();
-  gl_Position = vec4(.3f, .3f, 0.f, 1.f);
+  gl_Position = vec4(center.x + size, center.y + size, 0.f, 1.f);
   EmitVertex();
-  gl_Position = vec4(-.3f, -.3f, 0.f, 1.f);
+  gl_Position = vec4(center.x - size, center.y - size, 0.f, 1.f);
   EmitVertex();
   EndPrimitive();
+}
+
+void emitIsoContour(float isoValue, float ul_intensity, float ur_intensity, float ll_intensity, float lr_intensity, vec2 ul_NDCposition, vec2 ur_NDCposition, vec2 ll_NDCposition, vec2 lr_NDCposition) {
+    // Determine the marching squares case we are handling..
+    int bitfield = 0;
+    bitfield += int(ll_intensity < isoValue) * 1;
+    bitfield += int(lr_intensity < isoValue) * 2;
+    bitfield += int(ul_intensity < isoValue) * 4;
+    bitfield += int(ur_intensity < isoValue) * 8;
+
+    // ..use symmetry.
+    if (bitfield > 7)
+    {
+        bitfield = 15 - bitfield;
+    }
+
+    // Emit vertices according to the case determined above.
+    if (bitfield == 0)
+    {
+        EndPrimitive();
+    }
+    else if (bitfield == 1)
+    {
+        emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
+        emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
+        EndPrimitive();
+    }
+    else if (bitfield == 2)
+    {
+        emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
+        emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
+        EndPrimitive();
+    }
+    else if (bitfield == 3)
+    {
+        emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
+        emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
+        EndPrimitive();
+    }
+    else if (bitfield == 4)
+    {
+        emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
+        emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
+        EndPrimitive();
+    }
+    else if (bitfield == 5)
+    {
+        emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
+        emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
+        EndPrimitive();
+    }
+    else if (bitfield == 6)
+    {
+        emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
+        emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
+        EndPrimitive();
+        emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
+        emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
+        EndPrimitive();
+    }
+    else if (bitfield == 7)
+    {
+        emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
+        emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
+        EndPrimitive();
+    }
 }
 
 void main() {
@@ -50,79 +116,15 @@ void main() {
   float ll_intensity = imageLoad(scalarField, ll).r;
   float lr_intensity = imageLoad(scalarField, lr).r;
 
+
   // .. and the NDC coordinates of these corner points.
   // TODO: unhardcore 100
-  vec2 ul_NDCposition = ((ul - vec2(0)) / (vec2(100) - vec2(0)) - vec2(.5f)) * 2.f;
-  vec2 ur_NDCposition = ((ur - vec2(0)) / (vec2(100) - vec2(0)) - vec2(.5f)) * 2.f;
-  vec2 ll_NDCposition = ((ll - vec2(0)) / (vec2(100) - vec2(0)) - vec2(.5f)) * 2.f;
-  vec2 lr_NDCposition = ((lr - vec2(0)) / (vec2(100) - vec2(0)) - vec2(.5f)) * 2.f;
+  vec2 ul_NDCposition = (ul / vec2(99) - .5f) * 2.f;
+  vec2 ur_NDCposition = (ur / vec2(99) - .5f) * 2.f;
+  vec2 ll_NDCposition = (ll / vec2(99) - .5f) * 2.f;
+  vec2 lr_NDCposition = (lr / vec2(99) - .5f) * 2.f;
 
-  // Determine the marching squares case we are handling..
-  int bitfield = 0;
-  bitfield += int(ll_intensity < isoValue) * 1;
-  bitfield += int(lr_intensity < isoValue) * 2;
-  bitfield += int(ul_intensity < isoValue) * 4;
-  bitfield += int(ur_intensity < isoValue) * 8;
-
-  if (bitfield != 15 && bitfield != 0) {
-    test();
-  }
-
-  // ..use symmetry.
-  if (bitfield > 7)
-  {
-      bitfield = 15 - bitfield;
-  }
-
-  // Emit vertices according to the case determined above.
-  if (bitfield == 0)
-  {
-      EndPrimitive();
-  }
-  else if (bitfield == 1)
-  {
-      emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
-      emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
-      EndPrimitive();
-  }
-  else if (bitfield == 2)
-  {
-      emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
-      emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
-      EndPrimitive();
-  }
-  else if (bitfield == 3)
-  {
-      emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
-      emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
-      EndPrimitive();
-  }
-  else if (bitfield == 4)
-  {
-      emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
-      emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
-      EndPrimitive();
-  }
-  else if (bitfield == 5)
-  {
-      emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
-      emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
-      EndPrimitive();
-  }
-  else if (bitfield == 6)
-  {
-      emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
-      emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
-      EndPrimitive();
-      emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
-      emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
-      EndPrimitive();
-  }
-  else if (bitfield == 7)
-  {
-      emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
-      emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
-      EndPrimitive();
-  }
-
+  emitIsoContour(isoValue.x, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
+  emitIsoContour(isoValue.y, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
+  emitIsoContour(isoValue.z, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
 }

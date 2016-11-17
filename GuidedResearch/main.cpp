@@ -53,7 +53,7 @@ int main() {
 	GLfloat* scalarField = 0;
 	GLint* fieldCoords = 0;
 	GLint fieldCoordsSize;
-	generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -2, 3, 2, fieldCoords, fieldCoordsSize);
+	generateScalarField(scalarField, fieldWidth, fieldHeight, -2, -3, 2, 3, fieldCoords, fieldCoordsSize);
 
 	// Check scalar field coords
 	cout << "\nScalar field:" << endl;
@@ -78,7 +78,7 @@ int main() {
 	// Set uniforms
 	shader.Use();
 	glUniform1i(glGetUniformLocation(shader.Program, "scalarField"), 0); // image unit 0
-	glUniform1f(glGetUniformLocation(shader.Program, "isoValue"), scalarField[rand() % (fieldWidth * fieldHeight - 1)]);
+	glUniform3f(glGetUniformLocation(shader.Program, "isoValue"), .1f, .4f, .8f);
 
 	// Store scalar field into a texture
 	GLuint scalarFieldTex;
@@ -100,7 +100,7 @@ int main() {
 	// Setup vertex array
 	glBindVertexArray(VAO);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_INT, GL_FALSE, 2 * sizeof(GLint), 0);
+	glVertexAttribPointer(0, 2, GL_INT, GL_FALSE, 0, 0);
 	glBindVertexArray(0);
 
 
