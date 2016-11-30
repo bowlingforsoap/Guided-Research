@@ -53,7 +53,7 @@ int main() {
 	GLfloat* scalarField = 0;
 	GLint* fieldCoords = 0;
 	GLint fieldCoordsSize;
-	generateScalarField(scalarField, fieldWidth, fieldHeight, -2, -3, 2, 3, fieldCoords, fieldCoordsSize);
+	generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -3, 3, 3, fieldCoords, fieldCoordsSize);
 
 	// Check scalar field coords
 	cout << "\nScalar field:" << endl;
@@ -102,6 +102,9 @@ int main() {
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 2, GL_INT, GL_FALSE, 0, 0);
 	glBindVertexArray(0);
+
+	// Line width
+	glLineWidth(5.f);
 
 
 	glClearColor(0.1f, 0.1f, 0.1f, 1.f);
