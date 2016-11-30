@@ -6,6 +6,8 @@ layout (line_strip, max_vertices = 12) out;
 layout (binding = 0, r32f) uniform image2D scalarField;
 uniform vec3 isoValue;
 
+out vec2 gs_Feedback;
+
 /**
   Emit a vertex between the two edge points p1 and p2 of the currently
   processed grid cell. This function needs to be called twice for each line
@@ -19,6 +21,7 @@ void emit(vec2 p1_NDCposition, vec2 p2_NDCposition,
 {
   float fraction = (isoValue - p1_intensity) / (p2_intensity - p1_intensity);
   vec2 vertex_NDCposition = mix(p1_NDCposition, p2_NDCposition, fraction);
+  gs_Feedback = vertex_NDCposition;
   gl_Position = vec4(vertex_NDCposition, 0.f, 1.f);
   EmitVertex();
 }
@@ -125,6 +128,6 @@ void main() {
   vec2 lr_NDCposition = (lr / vec2(99) - .5f) * 2.f;
 
   emitIsoContour(isoValue.x, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
-  emitIsoContour(isoValue.y, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
-  emitIsoContour(isoValue.z, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
+  //emitIsoContour(isoValue.y, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
+  //emitIsoContour(isoValue.z, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
 }

@@ -56,7 +56,7 @@ int main() {
 	generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -3, 3, 3, fieldCoords, fieldCoordsSize);
 
 	// Check scalar field coords
-	cout << "\nScalar field:" << endl;
+	/*cout << "\nScalar field:" << endl;
 	for (int i = 0; i < 20; i++) {
 		cout << scalarField[i] << ", ";
 	}
@@ -73,7 +73,7 @@ int main() {
 	cout << "\nField coords end:" << endl;
 	for (int i = fieldCoordsSize - 1; i > fieldCoordsSize - 20; i--) {
 		cout << fieldCoords[i] << ", ";
-	}
+	}*/
 
 	// Set uniforms
 	shader.Use();
@@ -103,26 +103,68 @@ int main() {
 	glVertexAttribPointer(0, 2, GL_INT, GL_FALSE, 0, 0);
 	glBindVertexArray(0);
 
+	// Transform Feedback setup
+	GLuint TFBO;
+	glGenBuffers(1, &TFBO);
+	glBindBuffer(GL_ARRAY_BUFFER, TFBO);
+	// Theoretically each square can have up to 4 points, each point has 2 coords in GLFfloat -> fieldHeight * fieldWidth * 4 * 2 * sizeof(GLfloat)
+	glBufferData(GL_ARRAY_BUFFER, fieldHeight * fieldWidth * 8 * sizeof(GLfloat), nullptr, GL_STATIC_READ);
+	// Bind TFBO to 0th binding point
+	glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, TFBO);
+	// Specify feedback varyings
+	const GLchar* feedbackVaryings[]{ "gs_Feedback" };
+	glTransformFeedbackVaryings(shader.Program, 1, feedbackVaryings, GL_INTERLEAVED_ATTRIBS);
+	// Relink program for changes to be commited
+	glLinkProgram(shader.Program);
+	//cout << "Error: " << glGetError() << endl;
+
 	// Line width
 	glLineWidth(5.f);
+
+	// Create a query to later query OpenGL
+	GLuint query;
+	glGenQueries(1, &query);
 
 
 	glClearColor(0.1f, 0.1f, 0.1f, 1.f);
 	// Gameloop
-	while (!glfwWindowShouldClose(window)) {
-		glfwPollEvents();
+	//while (!glfwWindowShouldClose(window)) {
+		//glfwPollEvents();
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		shader.Use();
-		//glBindTexture(GL_TEXTURE_2D, scalarFieldTex);
-		glBindVertexArray(VAO);
-		glDrawArrays(GL_POINTS, 0, fieldCoordsSize / 2);
-		glBindVertexArray(0);
+		// Query OpenGL about how many primitives were transform feedbacked
+		glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, query);
+			glBeginTransformFeedback(GL_LINES);
+				glBindVertexArray(VAO);
+					glDrawArrays(GL_POINTS, 0, fieldCoordsSize / 2);
+				// TODO: potential needs to be placed after glEndTransformFeedback
+				glBindVertexArray(0);
+			glEndTransformFeedback();
+		glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
 
 		glfwSwapBuffers(window);
-	}
+//	}
 
+	// Get query result: number of primitives written
+	GLint numPrimitives;
+	glGetQueryObjectiv(query, GL_QUERY_RESULT, &numPrimitives);
+	cout << "Number of primitives written: " << numPrimitives << endl;
+
+	// Read data from the GL_TRANSFORM_FEEDBACK_BUFFER
+	GLint numBytesToRead = numPrimitives * 2 * 2 * sizeof(GLfloat);
+	GLfloat* vertices = (GLfloat*) glMapBufferRange(GL_TRANSFORM_FEEDBACK_BUFFER, 0, numBytesToRead, GL_MAP_READ_BIT);
+	int verticesLength = numPrimitives * 2;
+
+	cout << vertices[verticesLength - 1] << " " << vertices[verticesLength / 2 + 1] << endl;
+	
+	glUnmapBuffer(GL_TRANSFORM_FEEDBACK_BUFFER);
+
+		
+	system("pause");
+	// Once a transform feedback object is no longer needed, it should be deleted
+	glDeleteTransformFeedbacks(1, &TFBO);
 	glfwTerminate();
 	return 666;
 }
