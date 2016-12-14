@@ -1,6 +1,7 @@
 #pragma once
 
 #include <gl\glew.h>
+#include <GLFW\glfw3.h>
 #include <vector>
 
 using namespace std;
@@ -38,7 +39,7 @@ vector<vector<Point>> getContour(GLvoid* feedback, int numPrimitives) {
 	// Copy data from feedback buffer to feedbackVector for future manipulations
 	memcpy(&feedbackVector[0], feedback, feedbackVector.size() * sizeof(GLfloat));
 
-
+	// For each separate part of an iso-contour
 	while (feedbackVector.size() >= 4) {
 		contourLine.clear();
 
@@ -51,42 +52,107 @@ vector<vector<Point>> getContour(GLvoid* feedback, int numPrimitives) {
 		contourLine.push_back(l1.begin);
 		contourLine.push_back(l1.end);
 
+		// Indicates that the line did not loop on itself and has to be traced to the other direction from the start
+		bool traceBack = false;
 		int i = 0;
-		// Try to append lines to the back of l1
-		while (i <= feedbackVector.size() - 4) {
-			// TODO: unravel the mystery
-			if (feedbackVector.size() == 0) {
-				break;
-			}
+		
+		if (!traceBack) {
+			// Try to append lines to the back of l1
+			while (i <= feedbackVector.size() - 4) {
+				//while (true) {
+					// Like this because size changes dynamically and while seems to cache .size() result
+				if (feedbackVector.size() == 0 || l1.begin == l1.end) {
+					break;
+				}
 
-			Line l2 = { Point{feedbackVector[i], feedbackVector[i + 1]}, Point{ feedbackVector[i + 2], feedbackVector[i + 3]} };
+				Line l2 = { Point{feedbackVector[i], feedbackVector[i + 1]}, Point{ feedbackVector[i + 2], feedbackVector[i + 3]} };
 
-			// If l2 continues l1
-			if (l1.end == l2.begin) {
-				// Add it l2 to the back of contourLine
-				contourLine.push_back(l2.end);
-				l1.end = l2.end;
+				// If l2 continues l1
+				if (l1.end == l2.begin) {
+					// Add it l2 to the back of contourLine
+					contourLine.push_back(l2.end);
+					l1.end = l2.end;
+					// Remove l2 from the feedbackVector
+					feedbackVector.erase(feedbackVector.begin() + i, feedbackVector.begin() + i + 4);
+					// Start comparison from the begining again
+					i = 0;
+				} else if (abs(l1.end.x) == 1.0f || abs(l1.end.y) == 1.f) {
+					// If we hit the edge of the screen
+					traceBack = true;
+					break;
+				} else {
+					// continue search
+					i += 4;
+					continue;
+				}
 			}
-			else if (l1.begin == l2.end) {
-				// Add it l2 to the front of contourLine
-				contourLine.insert(contourLine.begin(), l2.begin);
-				l1.begin = l2.begin;
-			}
-			else {
-				i += 4;
-				continue;
-			}
-
-			// Start comparison from the begining again
-			i = 0;
-			// Remove l2 from the feedbackVector
-			feedbackVector.erase(feedbackVector.begin() + i, feedbackVector.begin() + i + 4);
 		}
 
-		
+		if (traceBack) {
+			// Try to append lines to the front of l1
+			i = 0;
+			while (i <= feedbackVector.size() - 4) {
+				//while (true) {
+				// Like this because size changes dynamically and while seems to cache .size() result
+				if (feedbackVector.size() == 0) {
+					break;
+				}
+
+				Line l2 = { Point{ feedbackVector[i], feedbackVector[i + 1] }, Point{ feedbackVector[i + 2], feedbackVector[i + 3] } };
+
+				// If l1 continues l2
+				if (l1.begin == l2.end) {
+					contourLine.insert(contourLine.begin(), l2.begin);
+					l1.begin = l2.begin;
+					// Remove l2 from the feedbackVector
+					feedbackVector.erase(feedbackVector.begin() + i, feedbackVector.begin() + i + 4);
+					// Start comparison from the begining again
+					i = 0;
+				}
+				else if (abs(l1.begin.x) == 1.0f || abs(l1.begin.y) == 1.f) {
+					// If we hit the edge of the screen again
+					break;
+				}
+				else {
+					// continue search
+					i += 4;
+					continue;
+				}
+			}
+		}
+
 		contour.push_back(contourLine);
 	}
 
 	return contour;
+}
+
+
+void renderContour(GLFWwindow& window, vector<vector<Point>>& contour) {
+	Shader shader("shaders/reconstructedcontour/vert.glsl", "shaders/reconstructedcontour/frag.glsl", "");
+
+	GLuint VBO, VAO;
+	glGenBuffers(1, &VBO);
+	glGenVertexArrays(1, &VAO);
+
+	for (int i = 0; i < contour.size(); i++) {
+		cout << "contour[" << i << "].size(): " << contour[i].size() << endl;
+
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glBufferData(GL_ARRAY_BUFFER, contour[i].size() * sizeof(GLfloat), &contour[i], GL_STATIC_DRAW);
+
+		glBindVertexArray(VAO);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+
+		shader.Use();
+		glDrawArrays(GL_LINE_STRIP, 0, contour[i].size() / 2);
+		glBindVertexArray(0);
+	}
+	glfwSwapBuffers(&window);
+
+	// Clean-up
+	glDeleteBuffers(1, &VBO);
+	glDeleteVertexArrays(1, &VAO);
 }
 

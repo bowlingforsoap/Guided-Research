@@ -5,6 +5,7 @@ layout (line_strip, max_vertices = 12) out;
 
 layout (binding = 0, r32f) uniform image2D scalarField;
 uniform vec3 isoValue;
+uniform vec2 domainUpperBound;
 
 out vec2 gs_Feedback;
 
@@ -122,10 +123,10 @@ void main() {
 
   // .. and the NDC coordinates of these corner points.
   // TODO: unhardcore 100
-  vec2 ul_NDCposition = (ul / vec2(99) - .5f) * 2.f;
-  vec2 ur_NDCposition = (ur / vec2(99) - .5f) * 2.f;
-  vec2 ll_NDCposition = (ll / vec2(99) - .5f) * 2.f;
-  vec2 lr_NDCposition = (lr / vec2(99) - .5f) * 2.f;
+  vec2 ul_NDCposition = (ul / domainUpperBound - .5f) * 2.f;
+  vec2 ur_NDCposition = (ur / domainUpperBound - .5f) * 2.f;
+  vec2 ll_NDCposition = (ll / domainUpperBound - .5f) * 2.f;
+  vec2 lr_NDCposition = (lr / domainUpperBound - .5f) * 2.f;
 
   emitIsoContour(isoValue.x, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
   //emitIsoContour(isoValue.y, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
