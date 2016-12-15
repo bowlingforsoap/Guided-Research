@@ -136,19 +136,19 @@ int main() {
 	cout << "Number of primitives written: " << numPrimitives << endl;
 
 	// Read data from the GL_TRANSFORM_FEEDBACK_BUFFER
-	cout << "GL_TRANSFORM_FEEDBACK_BUFFER main. ";
-	printBufferContents(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(GLfloat) * 0, sizeof(GLfloat) * 10);
+	cout << "GL_TRANSFORM_FEEDBACK_BUFFER main: ";
+	printBufferContents(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(GLfloat) * 0, sizeof(GLfloat) * 24);
 
 	// Test what we got from TF
 	//testTransformFeedback(numPrimitives, *window, TFBO);
 
 	// Sort the primitives and retrieve the contour
-	/*vector<vector<Point>> contour = getContour(glMapBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, GL_READ_ONLY), numPrimitives);
+	vector<vector<Point>> contour = getContour(glMapBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, GL_READ_ONLY), numPrimitives);
 	glUnmapBuffer(GL_TRANSFORM_FEEDBACK_BUFFER);
 	cout << "contour size: " << contour.size() << endl;
 
 	// Draw the contour
-	renderContour(*window, contour);*/
+	renderContour(*window, contour);
 		
 	system("pause");
 	// Once a transform feedback object is no longer needed, it should be deleted.

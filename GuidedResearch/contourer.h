@@ -76,6 +76,14 @@ vector<vector<Point>> getContour(GLvoid* feedback, int numPrimitives) {
 					feedbackVector.erase(feedbackVector.begin() + i, feedbackVector.begin() + i + 4);
 					// Start comparison from the begining again
 					i = 0;
+				} if (l1.end == l2.end) {
+					// Add it l2 to the back of contourLine reversed
+					contourLine.push_back(l2.begin);
+					l1.end = l2.begin;
+					// Remove l2 from the feedbackVector
+					feedbackVector.erase(feedbackVector.begin() + i, feedbackVector.begin() + i + 4);
+					// Start comparison from the begining again
+					i = 0;
 				} else if (abs(l1.end.x) == 1.0f || abs(l1.end.y) == 1.f) {
 					// If we hit the edge of the screen
 					traceBack = true;
@@ -108,12 +116,17 @@ vector<vector<Point>> getContour(GLvoid* feedback, int numPrimitives) {
 					feedbackVector.erase(feedbackVector.begin() + i, feedbackVector.begin() + i + 4);
 					// Start comparison from the begining again
 					i = 0;
-				}
-				else if (abs(l1.begin.x) == 1.0f || abs(l1.begin.y) == 1.f) {
+				} else if (l1.begin == l2.begin) {
+					contourLine.insert(contourLine.begin(), l2.end);
+					l1.begin = l2.end;
+					// Remove l2 from the feedbackVector
+					feedbackVector.erase(feedbackVector.begin() + i, feedbackVector.begin() + i + 4);
+					// Start comparison from the begining again
+					i = 0;
+				} else if (abs(l1.begin.x) == 1.f || abs(l1.begin.y) == 1.f) {
 					// If we hit the edge of the screen again
 					break;
-				}
-				else {
+				} else {
 					// continue search
 					i += 4;
 					continue;
@@ -144,6 +157,8 @@ void renderContour(GLFWwindow& window, vector<vector<Point>>& contour) {
 		glBindVertexArray(VAO);
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+
+		glLineWidth(5.f);
 
 		shader.Use();
 		glDrawArrays(GL_LINE_STRIP, 0, contour[i].size() / 2);
