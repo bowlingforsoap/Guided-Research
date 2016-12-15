@@ -123,10 +123,10 @@ void main() {
 
   // .. and the NDC coordinates of these corner points.
   // TODO: unhardcore 100
-  vec2 ul_NDCposition = (ul / domainUpperBound - .5f) * 2.f;
-  vec2 ur_NDCposition = (ur / domainUpperBound - .5f) * 2.f;
-  vec2 ll_NDCposition = (ll / domainUpperBound - .5f) * 2.f;
-  vec2 lr_NDCposition = (lr / domainUpperBound - .5f) * 2.f;
+  vec2 ul_NDCposition = (vec2(ul) / domainUpperBound - .5f) * 2.f;
+  vec2 ur_NDCposition = (vec2(ur) / domainUpperBound - .5f) * 2.f;
+  vec2 ll_NDCposition = (vec2(ll) / domainUpperBound - .5f) * 2.f;
+  vec2 lr_NDCposition = (vec2(lr) / domainUpperBound - .5f) * 2.f;
 
   emitIsoContour(isoValue.x, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
   //emitIsoContour(isoValue.y, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);

@@ -2,6 +2,8 @@
 #include <util/Shader.h>
 #include <SOIL.h>
 
+#include <iomanip>      // std::setprecision
+
 #include "contourer.h"
 
 /*
@@ -24,7 +26,7 @@ int main() {
 	glViewport(0, 0, width, height);
 
 	// Setup shaders
-	Shader shader("vert.glsl", "frag.glsl", "geometry.glsl");
+	Shader shader("shaders/marchingsquares/vert.glsl", "shaders/marchingsquares/frag.glsl", "shaders/marchingsquares/geometry.glsl");
 	// Check some OpenGL capabilities
 	GLint value;
 	glGetIntegerv(GL_MAX_GEOMETRY_IMAGE_UNIFORMS, &value);
@@ -33,7 +35,7 @@ int main() {
 	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
 
 	// Scalar Field setup
-	GLint fieldWidth = 100, fieldHeight = 100;
+	GLint fieldWidth = 5, fieldHeight = 5;
 	GLfloat* scalarField = 0;
 	GLint* fieldCoords = 0;
 	GLint fieldCoordsSize;
@@ -59,10 +61,7 @@ int main() {
 		cout << fieldCoords[i] << ", ";
 	}*/
 
-	// Set uniforms
-	shader.Use();
-	glUniform1i(glGetUniformLocation(shader.Program, "scalarField"), 0); // image unit 0
-	glUniform3f(glGetUniformLocation(shader.Program, "isoValue"), .5f, .4f, .8f);
+	
 
 	// Store scalar field into a texture
 	GLuint scalarFieldTex;
@@ -101,9 +100,16 @@ int main() {
 	// Relink program for changes to be commited
 	glLinkProgram(shader.Program);
 	cout << "Error check: " << glGetError() << endl;
+	
+	// Set uniforms
+	shader.Use();
+	glUniform1i(glGetUniformLocation(shader.Program, "scalarField"), 0); // image unit 0
+	glUniform3f(glGetUniformLocation(shader.Program, "isoValue"), .5f, .4f, .8f);
+	// TODO: check for zeroes
+	glUniform2f(glGetUniformLocation(shader.Program, "domainUpperBound"), fieldWidth - 1, fieldHeight - 1);
 
 	// Line width
-	glLineWidth(5.f);
+	//glLineWidth(5.f);
 
 	// Create a query to later query OpenGL
 	GLuint query;
@@ -112,7 +118,6 @@ int main() {
 	glClearColor(0.1f, 0.2, 0.1f, 1.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	shader.Use();
 	// Query OpenGL about how many primitives were transform feedbacked
 	glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, query);
 	glBeginTransformFeedback(GL_LINES);
@@ -132,16 +137,18 @@ int main() {
 
 	// Read data from the GL_TRANSFORM_FEEDBACK_BUFFER
 	cout << "GL_TRANSFORM_FEEDBACK_BUFFER main. ";
-	printBufferContents(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(GLfloat) * 50, sizeof(GLfloat) * 4);
+	printBufferContents(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(GLfloat) * 0, sizeof(GLfloat) * 10);
 
 	// Test what we got from TF
 	//testTransformFeedback(numPrimitives, *window, TFBO);
 
 	// Sort the primitives and retrieve the contour
-	vector<vector<Point>> contour = getContour(glMapBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, GL_READ_ONLY), numPrimitives);
+	/*vector<vector<Point>> contour = getContour(glMapBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, GL_READ_ONLY), numPrimitives);
 	glUnmapBuffer(GL_TRANSFORM_FEEDBACK_BUFFER);
-
 	cout << "contour size: " << contour.size() << endl;
+
+	// Draw the contour
+	renderContour(*window, contour);*/
 		
 	system("pause");
 	// Once a transform feedback object is no longer needed, it should be deleted.
@@ -186,8 +193,7 @@ void generateScalarField(GLfloat* &scalarField, GLint width, GLint height, GLflo
 void testTransformFeedback(int numPrimitives, GLFWwindow& window, GLuint& prevTFBO) {
 	//===========================================================
 	// Simple test for Transform Feedback data
-	cout << "Error check: " << glGetError() << endl;
-	Shader testShader("simpleVert.glsl", "simpleFrag.glsl", "");
+	Shader testShader("shaders/feedbacktest/simpleVert.glsl", "shaders/feedbacktest/simpleFrag.glsl", "");
 
 	// Fill VBO from TFBO
 	GLint numBytesInFeedback = numPrimitives * 2 * 2 * sizeof(GLfloat); // numPrimitives * verticesPerPrimitive * coordsPerVertex * sizeof(GLfloat)
@@ -202,7 +208,7 @@ void testTransformFeedback(int numPrimitives, GLFWwindow& window, GLuint& prevTF
 
 	// Сheck of what's in buffer
 	cout << "GL_ARRAY_BUFFER test fill. ";
-	printBufferContents(GL_ARRAY_BUFFER, sizeof(GLfloat) * 50, sizeof(GLfloat) * 4);
+	printBufferContents(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 4);
 
 	// Setup vertex arrays
 	GLuint testVAO;
@@ -230,14 +236,15 @@ void testTransformFeedback(int numPrimitives, GLFWwindow& window, GLuint& prevTF
 
 	testShader.Use();
 	glBeginTransformFeedback(GL_POINTS);
-	glBindVertexArray(testVBO);
+	glBindVertexArray(testVAO);
 	glDrawArrays(GL_POINTS, 0, numPrimitives * 2);
 	glBindVertexArray(0);
 	glEndTransformFeedback();
+	cout << "Error check: " << glGetError() << endl;
 
 	// Read data from the GL_TRANSFORM_FEEDBACK_BUFFER
 	cout << "GL_TRANSFORM_FEEDBACK_BUFFER test. ";
-	printBufferContents(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(GLfloat) * 50, sizeof(GLfloat) * 4);
+	printBufferContents(GL_TRANSFORM_FEEDBACK_BUFFER, 0, sizeof(GLfloat) * 4);
 
 	glfwSwapBuffers(&window);
 }
@@ -249,7 +256,7 @@ inline void printBufferContents(int buffer, GLintptr offset, GLsizei length) {
 
 	cout << "Buffer contents: ";
 	for (int i = 0; i < feedbackSize; i++) {
-		cout << feedback[i] << ", ";
+		cout << /*setprecision(20) <<*/ feedback[i] << ", ";
 	}
 	cout << endl;
 
