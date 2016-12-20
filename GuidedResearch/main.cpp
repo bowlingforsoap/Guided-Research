@@ -35,7 +35,7 @@ int main() {
 	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
 
 	// Scalar Field setup
-	GLint fieldWidth = 5, fieldHeight = 5;
+	GLint fieldWidth = 100, fieldHeight = 100;
 	GLfloat* scalarField = 0;
 	GLint* fieldCoords = 0;
 	GLint fieldCoordsSize;

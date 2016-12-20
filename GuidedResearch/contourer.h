@@ -6,6 +6,11 @@
 
 using namespace std;
 
+#define GL_ERROR_CHECK cout << "Error check: " << glGetError() << endl;
+
+// Used to deal with floating point precision issues.
+GLfloat epsilon = .000001f;
+
 struct Point {
 	GLfloat x;
 	GLfloat y;
@@ -14,9 +19,24 @@ struct Point {
 		if (x == rhs.x && y == rhs.y) {
 			return true;
 		}
+		if (Point{ abs(x - rhs.x), abs(y - rhs.y) } < Point{ epsilon, epsilon }) {
+			return true;
+		}
 		else {
 			return false;
 		}
+	}
+
+	inline Point operator-(const Point& rhs) {
+		return { x - rhs.x, y - rhs.y };
+	}
+
+	inline bool operator<(const Point& rhs) {
+		if (x < rhs.x && y < rhs.y) {
+			return true;
+		}
+
+		return false;
 	}
 };
 
@@ -76,7 +96,7 @@ vector<vector<Point>> getContour(GLvoid* feedback, int numPrimitives) {
 					feedbackVector.erase(feedbackVector.begin() + i, feedbackVector.begin() + i + 4);
 					// Start comparison from the begining again
 					i = 0;
-				} if (l1.end == l2.end) {
+				} else if (l1.end == l2.end) {
 					// Add it l2 to the back of contourLine reversed
 					contourLine.push_back(l2.begin);
 					l1.end = l2.begin;
@@ -84,7 +104,7 @@ vector<vector<Point>> getContour(GLvoid* feedback, int numPrimitives) {
 					feedbackVector.erase(feedbackVector.begin() + i, feedbackVector.begin() + i + 4);
 					// Start comparison from the begining again
 					i = 0;
-				} else if (abs(l1.end.x) == 1.0f || abs(l1.end.y) == 1.f) {
+				} else if (abs(abs(l1.end.x) - 1.0f) < epsilon || abs(abs(l1.end.y) - 1.f) < epsilon) {
 					// If we hit the edge of the screen
 					traceBack = true;
 					break;
@@ -123,7 +143,7 @@ vector<vector<Point>> getContour(GLvoid* feedback, int numPrimitives) {
 					feedbackVector.erase(feedbackVector.begin() + i, feedbackVector.begin() + i + 4);
 					// Start comparison from the begining again
 					i = 0;
-				} else if (abs(l1.begin.x) == 1.f || abs(l1.begin.y) == 1.f) {
+				} else if (abs(abs(l1.begin.x) - 1.f) < epsilon || abs(abs(l1.begin.y) - 1.f) < epsilon) { // TODO: move up
 					// If we hit the edge of the screen again
 					break;
 				} else {
@@ -148,24 +168,32 @@ void renderContour(GLFWwindow& window, vector<vector<Point>>& contour) {
 	glGenBuffers(1, &VBO);
 	glGenVertexArrays(1, &VAO);
 
+	// TODO: unhardcode or remove
+
+	const int colorsSize = 2;
+	GLfloat colors[colorsSize][3]{
+		.6f, .1f, .23f,
+		.1f, .6f, .23f
+	};
+
 	for (int i = 0; i < contour.size(); i++) {
 		cout << "contour[" << i << "].size(): " << contour[i].size() << endl;
 
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, contour[i].size() * sizeof(GLfloat), &contour[i], GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, contour[i].size() * 2 * sizeof(GLfloat), &contour[i], GL_STATIC_DRAW);
 
 		glBindVertexArray(VAO);
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
 
 		glLineWidth(5.f);
 
 		shader.Use();
-		glDrawArrays(GL_LINE_STRIP, 0, contour[i].size() / 2);
+		//glUniform3fv(glGetUniformLocation(shader.Program, "u_Color"), 3, colors[ 0]);
+		glDrawArrays(GL_LINE_STRIP, 0, contour[i].size());
 		glBindVertexArray(0);
 	}
 	glfwSwapBuffers(&window);
-
 	// Clean-up
 	glDeleteBuffers(1, &VBO);
 	glDeleteVertexArrays(1, &VAO);
