@@ -1,13 +1,13 @@
-#version 420 core
+#version 430 core
 
-layout (points) in;
-layout (line_strip, max_vertices = 12) out;
+layout (local_size_x = 100, local_size_y = 1) in;
 
+// Input scalar field
 layout (binding = 0, r32f) uniform image2D scalarField;
+// Reconstructed contour
+layout (binding = 1, r32f) uniform image2D contour;
 uniform vec3 isoValue;
 uniform vec2 domainUpperBound;
-
-out vec2 gs_Feedback;
 
 /**
   Emit a vertex between the two edge points p1 and p2 of the currently
@@ -22,13 +22,13 @@ void emit(vec2 p1_NDCposition, vec2 p2_NDCposition,
 {
   float fraction = (isoValue - p1_intensity) / (p2_intensity - p1_intensity);
   vec2 vertex_NDCposition = mix(p1_NDCposition, p2_NDCposition, fraction);
-  gs_Feedback = vertex_NDCposition;
-  gl_Position = vec4(vertex_NDCposition, 0.f, 1.f);
-  EmitVertex();
+  imageStore(contour, ivec2(gl_GlobalInvocationID), vec4(vertex_NDCposition.x, 0.f, 0.f, 0.f));
+  //gl_Position = vec4(vertex_NDCposition, 0.f, 1.f);
+  //EmitVertex();
 }
 
 void test(vec2 center, float size) {
-  gl_Position = vec4(center.x - size, center.y - size, 0.f, 1.f);
+  /*gl_Position = vec4(center.x - size, center.y - size, 0.f, 1.f);
   EmitVertex();
   gl_Position = vec4(center.x - size, center.y + size, 0.f, 1.f);
   EmitVertex();
@@ -36,9 +36,13 @@ void test(vec2 center, float size) {
   EmitVertex();
   gl_Position = vec4(center.x - size, center.y - size, 0.f, 1.f);
   EmitVertex();
-  EndPrimitive();
+  EndPrimitive();*/
 }
 
+/*
+ Emits a line segment for the contour defined by isoValue.
+ See variables description in main().
+*/
 void emitIsoContour(float isoValue, float ul_intensity, float ur_intensity, float ll_intensity, float lr_intensity, vec2 ul_NDCposition, vec2 ur_NDCposition, vec2 ll_NDCposition, vec2 lr_NDCposition) {
     // Determine the marching squares case we are handling..
     int bitfield = 0;
@@ -56,59 +60,59 @@ void emitIsoContour(float isoValue, float ul_intensity, float ur_intensity, floa
     // Emit vertices according to the case determined above.
     if (bitfield == 0)
     {
-        EndPrimitive();
+        //EndPrimitive();
     }
     else if (bitfield == 1)
     {
         emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
         emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
-        EndPrimitive();
+        //EndPrimitive();
     }
     else if (bitfield == 2)
     {
         emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
         emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
-        EndPrimitive();
+        //EndPrimitive();
     }
     else if (bitfield == 3)
     {
         emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
         emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
-        EndPrimitive();
+        //EndPrimitive();
     }
     else if (bitfield == 4)
     {
         emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
         emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
-        EndPrimitive();
+        //EndPrimitive();
     }
     else if (bitfield == 5)
     {
         emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
         emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
-        EndPrimitive();
+        //EndPrimitive();
     }
     else if (bitfield == 6)
     {
         emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
         emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
-        EndPrimitive();
+        //EndPrimitive();
         emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
         emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
-        EndPrimitive();
+        //EndPrimitive();
     }
     else if (bitfield == 7)
     {
         emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
         emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
-        EndPrimitive();
+        //EndPrimitive();
     }
 }
 
 void main() {
-  // gl_Position.xy encodes the i and j grid indices of the upper left corner
+  // gl_GlobalInvocationID.xy encodes the i and j grid indices of the upper left corner
   // of the grid cell processed by this shader instance.
-  ivec2 ul = ivec2(gl_in[0].gl_Position.xy);
+  ivec2 ul = ivec2(gl_GlobalInvocationID);
   ivec2 ur = ul + ivec2(1, 0);
   ivec2 ll = ul + ivec2(0, 1);
   ivec2 lr = ur + ivec2(0, 1);

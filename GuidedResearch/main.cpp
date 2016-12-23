@@ -21,16 +21,29 @@ inline void testTransformFeedback(int numPrimitives, GLFWwindow& window, GLuint&
 
 int main() {
 	GLint width = 1600, height = 1000;
-	GLFWwindow* window = glfwInitialize(width, height, "Guided Research", 4, 2, false);
+	GLFWwindow* window = glfwInitialize(width, height, "Guided Research", 4, 3, false);
 	glewInit();
 	glViewport(0, 0, width, height);
 
-	// Setup shaders
-	Shader shader("shaders/marchingsquares/vert.glsl", "shaders/marchingsquares/frag.glsl", "shaders/marchingsquares/geometry.glsl");
+	// Setup compute shader
+	GLuint computeShader = glCreateShader(GL_COMPUTE_SHADER);
+	string computeSrcString = Shader::getShaderCode("shaders/marchingsquares/compute.glsl");
+	const GLchar* computeSrc = computeSrcString.c_str();
+	glShaderSource(computeShader, 1, &computeSrc, NULL);
+	glCompileShader(computeShader);
+	Shader::checkShaderCompilationStatus(computeShader, computeSrc);
+	// Setup compute program 
+	GLuint computeProgram = glCreateProgram();
+	glAttachShader(computeProgram, computeShader);
+	glLinkProgram(computeProgram);
+	Shader::checkProgramLinkingStatus(computeProgram);
+
+	glDeleteShader(computeShader);
+
 	// Check some OpenGL capabilities
 	GLint value;
-	glGetIntegerv(GL_MAX_GEOMETRY_IMAGE_UNIFORMS, &value);
-	cout << "GL_MAX_GEOMETRY_IMAGE_UNIFORMS: " << value << endl;
+	glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &value);
+	cout << "MAX_COMPUTE_WORK_GROUP_INVOCATIONS: " << value << endl;
 	glGetIntegerv(GL_MAX_COMPUTE_SHARED_MEMORY_SIZE, &value);
 	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
 
@@ -64,6 +77,7 @@ int main() {
 	
 
 	// Store scalar field into a texture
+	glActiveTexture(GL_TEXTURE0);
 	GLuint scalarFieldTex;
 	glGenTextures(1, &scalarFieldTex);
 	glBindTexture(GL_TEXTURE_2D, scalarFieldTex);
@@ -73,8 +87,18 @@ int main() {
 	//cout << glGetError() << endl;
 	delete[] scalarField;
 
+	// Setup the output image for the texture
+	glActiveTexture(GL_TEXTURE1);
+	GLuint contourTex;
+	glGenTextures(1, &contourTex);
+	// TODO: maybe use Array texture, cause 4 bits per chanel is not enough
+	glBindTexture(GL_TEXTURE_2D, contourTex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, fieldWidth, fieldHeight, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glBindImageTexture(1, contourTex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
 	// Setup attributes
-	GLuint VAO, VBO;
+	/*GLuint VAO, VBO;
 	glGenBuffers(1, &VBO);
 	glGenVertexArrays(1, &VAO);
 	// Bind data
@@ -84,10 +108,10 @@ int main() {
 	glBindVertexArray(VAO);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 2, GL_INT, GL_FALSE, 0, 0);
-	glBindVertexArray(0);
+	glBindVertexArray(0);*/
 
 	// Transform Feedback setup
-	GLuint TFBO;
+	/*GLuint TFBO;
 	glGenBuffers(1, &TFBO);
 	glBindBuffer(GL_ARRAY_BUFFER, TFBO);
 	// Theoretically each square can have up to 4 points, each point has 2 coords in GLFfloat -> fieldHeight * fieldWidth * 4 * 2 * sizeof(GLfloat)
@@ -99,56 +123,59 @@ int main() {
 	glTransformFeedbackVaryings(shader.Program, 1, feedbackVaryings, GL_INTERLEAVED_ATTRIBS);
 	// Relink program for changes to be commited
 	glLinkProgram(shader.Program);
-	cout << "Error check: " << glGetError() << endl;
+	cout << "Error check: " << glGetError() << endl;*/
 	
 	// Set uniforms
-	shader.Use();
-	glUniform1i(glGetUniformLocation(shader.Program, "scalarField"), 0); // image unit 0
-	glUniform3f(glGetUniformLocation(shader.Program, "isoValue"), .5f, .4f, .8f);
+	glUseProgram(computeProgram);
+	glUniform3f(glGetUniformLocation(computeProgram, "isoValue"), .5f, .4f, .8f);
 	// TODO: check for zeroes
-	glUniform2f(glGetUniformLocation(shader.Program, "domainUpperBound"), fieldWidth - 1, fieldHeight - 1);
+	glUniform2f(glGetUniformLocation(computeProgram, "domainUpperBound"), fieldWidth - 1, fieldHeight - 1);
+	// Image units uniforms
+	glUniform1i(glGetUniformLocation(computeProgram, "scalarField"), 0);
+	glUniform1i(glGetUniformLocation(computeProgram, "contour"), 1);
 
 	// Line width
 	//glLineWidth(5.f);
 
 	// Create a query to later query OpenGL
-	GLuint query;
-	glGenQueries(1, &query);
+	//GLuint query;
+	//glGenQueries(1, &query);
 
 	glClearColor(0.1f, 0.2, 0.1f, 1.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	// Query OpenGL about how many primitives were transform feedbacked
-	glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, query);
-	glBeginTransformFeedback(GL_LINES);
-	glBindVertexArray(VAO);
-	glDrawArrays(GL_POINTS, 0, fieldCoordsSize / 2);
+	//glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, query);
+	//glBeginTransformFeedback(GL_LINES);
+	//glBindVertexArray(VAO);
+	//glDrawArrays(GL_POINTS, 0, fieldCoordsSize / 2);
 	// TODO: potential needs to be placed after glEndTransformFeedback
-	glBindVertexArray(0);
-	glEndTransformFeedback();
-	glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
-
+	//glBindVertexArray(0);
+	//glEndTransformFeedback();
+	//glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
+	glDispatchCompute(1, 100, 1);
 	glfwSwapBuffers(window);
 
 	// Get query result: number of primitives written
-	GLint numPrimitives;
-	glGetQueryObjectiv(query, GL_QUERY_RESULT, &numPrimitives);
-	cout << "Number of primitives written: " << numPrimitives << endl;
+	//GLint numPrimitives;
+	//glGetQueryObjectiv(query, GL_QUERY_RESULT, &numPrimitives);
+	//cout << "Number of primitives written: " << numPrimitives << endl;
 
 	// Read data from the GL_TRANSFORM_FEEDBACK_BUFFER
-	cout << "GL_TRANSFORM_FEEDBACK_BUFFER main: ";
-	printBufferContents(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(GLfloat) * 0, sizeof(GLfloat) * 24);
+	//cout << "GL_TRANSFORM_FEEDBACK_BUFFER main: ";
+	//printBufferContents(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(GLfloat) * 0, sizeof(GLfloat) * 24);
 
 	// Test what we got from TF
 	//testTransformFeedback(numPrimitives, *window, TFBO);
 
 	// Sort the primitives and retrieve the contour
-	vector<vector<Point>> contour = getContour(glMapBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, GL_READ_ONLY), numPrimitives);
+	// TODO: alter contour recreation to fit texture data
+	/*vector<vector<Point>> contour = getContour(glMapBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, GL_READ_ONLY), numPrimitives);
 	glUnmapBuffer(GL_TRANSFORM_FEEDBACK_BUFFER);
-	cout << "contour size: " << contour.size() << endl;
+	cout << "contour size: " << contour.size() << endl;*/
 
 	// Draw the contour
-	renderContour(*window, contour);
+	//renderContour(*window, contour);
 		
 	system("pause");
 	// Once a transform feedback object is no longer needed, it should be deleted.
