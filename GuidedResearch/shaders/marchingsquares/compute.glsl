@@ -5,7 +5,7 @@ layout (local_size_x = 100, local_size_y = 1) in;
 // Input scalar field
 layout (binding = 0, r32f) uniform image2D scalarField;
 // Reconstructed contour
-layout (binding = 1, r32f) uniform image2D contour;
+layout (binding = 1, r32f) uniform image2DArray contour;
 uniform vec3 isoValue;
 uniform vec2 domainUpperBound;
 
@@ -16,13 +16,14 @@ uniform vec2 domainUpperBound;
 
   Parameters are the world space position of p1 and p2, their intensities,
   and the iso value of the current contour line.
+  vertexIndex - index of a vertex to emit in the 2D image array.
  */
 void emit(vec2 p1_NDCposition, vec2 p2_NDCposition,
-          float p1_intensity, float p2_intensity, float isoValue)
+          float p1_intensity, float p2_intensity, float isoValue, int vertexIndex)
 {
   float fraction = (isoValue - p1_intensity) / (p2_intensity - p1_intensity);
   vec2 vertex_NDCposition = mix(p1_NDCposition, p2_NDCposition, fraction);
-  imageStore(contour, ivec2(gl_GlobalInvocationID), vec4(vertex_NDCposition.x, 0.f, 0.f, 0.f));
+  imageStore(contour, ivec3(gl_GlobalInvocationID.xy, vertexIndex), vec4(vertex_NDCposition.x, 0.f, 0.f, 0.f));
   //gl_Position = vec4(vertex_NDCposition, 0.f, 1.f);
   //EmitVertex();
 }
@@ -58,54 +59,43 @@ void emitIsoContour(float isoValue, float ul_intensity, float ur_intensity, floa
     }
 
     // Emit vertices according to the case determined above.
-    if (bitfield == 0)
+    if (bitfield == 1)
     {
-        //EndPrimitive();
-    }
-    else if (bitfield == 1)
-    {
-        emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
-        emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
-        //EndPrimitive();
+        emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue, 0);
+        emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue, 1);
     }
     else if (bitfield == 2)
     {
-        emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
-        emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
-        //EndPrimitive();
+        emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue, 0);
+        emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue, 1);
     }
     else if (bitfield == 3)
     {
-        emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
-        emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
-        //EndPrimitive();
+        emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue, 0);
+        emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue, 1);
     }
     else if (bitfield == 4)
     {
-        emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
-        emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
-        //EndPrimitive();
+        emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue, 0);
+        emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue, 1);
     }
     else if (bitfield == 5)
     {
-        emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
-        emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
-        //EndPrimitive();
+        emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue, 0);
+        emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue, 1);
     }
     else if (bitfield == 6)
     {
-        emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue);
-        emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue);
-        //EndPrimitive();
-        emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
-        emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
-        //EndPrimitive();
+        emit(ll_NDCposition, ul_NDCposition, ll_intensity, ul_intensity, isoValue, 0);
+        emit(ll_NDCposition, lr_NDCposition, ll_intensity, lr_intensity, isoValue, 1);
+
+        emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue, 2);
+        emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue, 3);
     }
     else if (bitfield == 7)
     {
-        emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue);
-        emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue);
-        //EndPrimitive();
+        emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue, 0);
+        emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue, 0);
     }
 }
 

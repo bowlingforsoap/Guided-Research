@@ -46,6 +46,8 @@ int main() {
 	cout << "MAX_COMPUTE_WORK_GROUP_INVOCATIONS: " << value << endl;
 	glGetIntegerv(GL_MAX_COMPUTE_SHARED_MEMORY_SIZE, &value);
 	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
+	glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &value);
+	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
 
 	// Scalar Field setup
 	GLint fieldWidth = 100, fieldHeight = 100;
@@ -91,39 +93,15 @@ int main() {
 	glActiveTexture(GL_TEXTURE1);
 	GLuint contourTex;
 	glGenTextures(1, &contourTex);
-	// TODO: maybe use Array texture, cause 4 bits per chanel is not enough
-	glBindTexture(GL_TEXTURE_2D, contourTex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, fieldWidth, fieldHeight, 0, GL_RGBA, GL_FLOAT, nullptr);
-	glBindImageTexture(1, contourTex, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	// Setup attributes
-	/*GLuint VAO, VBO;
-	glGenBuffers(1, &VBO);
-	glGenVertexArrays(1, &VAO);
-	// Bind data
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, fieldCoordsSize * sizeof(GLint), fieldCoords, GL_STATIC_DRAW);
-	// Setup vertex array
-	glBindVertexArray(VAO);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_INT, GL_FALSE, 0, 0);
-	glBindVertexArray(0);*/
-
-	// Transform Feedback setup
-	/*GLuint TFBO;
-	glGenBuffers(1, &TFBO);
-	glBindBuffer(GL_ARRAY_BUFFER, TFBO);
-	// Theoretically each square can have up to 4 points, each point has 2 coords in GLFfloat -> fieldHeight * fieldWidth * 4 * 2 * sizeof(GLfloat)
-	glBufferData(GL_ARRAY_BUFFER, fieldHeight * fieldWidth * 8 * sizeof(GLfloat), nullptr, GL_STATIC_READ);
-	// Bind TFBO to 0th binding point
-	glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, TFBO);
-	// Specify feedback varyings
-	const GLchar* feedbackVaryings[]{ "gs_Feedback" };
-	glTransformFeedbackVaryings(shader.Program, 1, feedbackVaryings, GL_INTERLEAVED_ATTRIBS);
-	// Relink program for changes to be commited
-	glLinkProgram(shader.Program);
-	cout << "Error check: " << glGetError() << endl;*/
+	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
+	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_R32F, fieldWidth, fieldHeight, 4);
+	// No need to use, to fill with empty ddata. When used with nullptr as a data, causes access violation.
+	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
+	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 1, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
+	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 2, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
+	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 3, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
+	glBindImageTexture(1, contourTex, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RED);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 	
 	// Set uniforms
 	glUseProgram(computeProgram);
@@ -134,39 +112,11 @@ int main() {
 	glUniform1i(glGetUniformLocation(computeProgram, "scalarField"), 0);
 	glUniform1i(glGetUniformLocation(computeProgram, "contour"), 1);
 
-	// Line width
-	//glLineWidth(5.f);
-
-	// Create a query to later query OpenGL
-	//GLuint query;
-	//glGenQueries(1, &query);
-
 	glClearColor(0.1f, 0.2, 0.1f, 1.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	// Query OpenGL about how many primitives were transform feedbacked
-	//glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, query);
-	//glBeginTransformFeedback(GL_LINES);
-	//glBindVertexArray(VAO);
-	//glDrawArrays(GL_POINTS, 0, fieldCoordsSize / 2);
-	// TODO: potential needs to be placed after glEndTransformFeedback
-	//glBindVertexArray(0);
-	//glEndTransformFeedback();
-	//glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
 	glDispatchCompute(1, 100, 1);
 	glfwSwapBuffers(window);
-
-	// Get query result: number of primitives written
-	//GLint numPrimitives;
-	//glGetQueryObjectiv(query, GL_QUERY_RESULT, &numPrimitives);
-	//cout << "Number of primitives written: " << numPrimitives << endl;
-
-	// Read data from the GL_TRANSFORM_FEEDBACK_BUFFER
-	//cout << "GL_TRANSFORM_FEEDBACK_BUFFER main: ";
-	//printBufferContents(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(GLfloat) * 0, sizeof(GLfloat) * 24);
-
-	// Test what we got from TF
-	//testTransformFeedback(numPrimitives, *window, TFBO);
 
 	// Sort the primitives and retrieve the contour
 	// TODO: alter contour recreation to fit texture data
@@ -178,9 +128,6 @@ int main() {
 	//renderContour(*window, contour);
 		
 	system("pause");
-	// Once a transform feedback object is no longer needed, it should be deleted.
-	// TFBO is not a TF buffer, but a GL_ARRAY_BUFFER!
-	//glDeleteTransformFeedbacks(1, &TFBO);
 	glfwTerminate();
 	return 666;
 }
@@ -214,66 +161,6 @@ void generateScalarField(GLfloat* &scalarField, GLint width, GLint height, GLflo
 		fieldCoords[i * 2 + 1] = i % (height - 1);
 		i = i++;
 	}
-}
-
-// Renders Transform Feedback results.
-void testTransformFeedback(int numPrimitives, GLFWwindow& window, GLuint& prevTFBO) {
-	//===========================================================
-	// Simple test for Transform Feedback data
-	Shader testShader("shaders/feedbacktest/simpleVert.glsl", "shaders/feedbacktest/simpleFrag.glsl", "");
-
-	// Fill VBO from TFBO
-	GLint numBytesInFeedback = numPrimitives * 2 * 2 * sizeof(GLfloat); // numPrimitives * verticesPerPrimitive * coordsPerVertex * sizeof(GLfloat)
-	GLuint testVBO;
-	glGenBuffers(1, &testVBO);
-	glBindBuffer(GL_ARRAY_BUFFER, testVBO);
-	glBufferData(GL_ARRAY_BUFFER, numBytesInFeedback, nullptr, GL_STATIC_DRAW);
-	glCopyBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, GL_ARRAY_BUFFER, 0, 0, numBytesInFeedback);
-
-	// Delete buffer base for transform feedback
-	glDeleteBuffers(1, &prevTFBO);
-
-	// Сheck of what's in buffer
-	cout << "GL_ARRAY_BUFFER test fill. ";
-	printBufferContents(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 4);
-
-	// Setup vertex arrays
-	GLuint testVAO;
-	glGenVertexArrays(1, &testVAO);
-	glBindVertexArray(testVAO);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glBindVertexArray(0);
-
-	// Setup Transform Feedback for testing
-	GLuint TFBO;
-	glGenBuffers(1, &TFBO);
-	glBindBuffer(GL_ARRAY_BUFFER, TFBO);
-	glBufferData(GL_ARRAY_BUFFER, numBytesInFeedback * 2, nullptr, GL_STATIC_READ);
-	glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, TFBO);
-	// Set Feedback Varying
-	GLchar* feedbackVaryings[]{ "vs_Feedback" };
-	glTransformFeedbackVaryings(testShader.Program, 1, feedbackVaryings, GL_INTERLEAVED_ATTRIBS);
-	glLinkProgram(testShader.Program);
-
-	//glClearColor(1.f, 0.5f, 0.1f, 1.f);
-	//glClear(GL_COLOR_BUFFER_BIT);
-	// Set point size big for convenience purposes
-	glPointSize(20.f);
-
-	testShader.Use();
-	glBeginTransformFeedback(GL_POINTS);
-	glBindVertexArray(testVAO);
-	glDrawArrays(GL_POINTS, 0, numPrimitives * 2);
-	glBindVertexArray(0);
-	glEndTransformFeedback();
-	cout << "Error check: " << glGetError() << endl;
-
-	// Read data from the GL_TRANSFORM_FEEDBACK_BUFFER
-	cout << "GL_TRANSFORM_FEEDBACK_BUFFER test. ";
-	printBufferContents(GL_TRANSFORM_FEEDBACK_BUFFER, 0, sizeof(GLfloat) * 4);
-
-	glfwSwapBuffers(&window);
 }
 
 // Print contents of currently bound GL_TRANSFORM_FEEDBACK_BUFFER as GLfloat.
