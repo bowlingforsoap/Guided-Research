@@ -46,7 +46,6 @@ struct Line {
 };
 
 // All lines that belong to this contour.
-vector<vector<Point>> getContour(GLvoid* feedback, int numPrimitives) {
 	// Final result container
 	vector<vector<Point>> contour;
 	// Complete contour lines assembled from primitives (small line pieces) stored in feedback
@@ -55,9 +54,12 @@ vector<vector<Point>> getContour(GLvoid* feedback, int numPrimitives) {
 	// Get data from feedback
 	vector<GLfloat> feedbackVector;
 	// Primitive is a line: 2 verts with 2 floats per vertex
-	feedbackVector.resize(numPrimitives * 2 * 2);
 	// Copy data from feedback buffer to feedbackVector for future manipulations
 	memcpy(&feedbackVector[0], feedback, feedbackVector.size() * sizeof(GLfloat));
+
+	{
+		
+	}
 
 	// For each separate part of an iso-contour
 	while (feedbackVector.size() >= 4) {

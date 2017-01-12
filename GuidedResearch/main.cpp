@@ -133,10 +133,8 @@ int main() {
 	cout << "." << endl;
 
 	// Sort the primitives and retrieve the contour
-	// TODO: alter contour recreation to fit texture data
-	/*vector<vector<Point>> contour = getContour(glMapBuffer(GL_TRANSFORM_FEEDBACK_BUFFER, GL_READ_ONLY), numPrimitives);
-	glUnmapBuffer(GL_TRANSFORM_FEEDBACK_BUFFER);
-	cout << "contour size: " << contour.size() << endl;*/
+	vector<vector<Point>> contour = getContour(contourTexData, contourTexSize);
+	cout << "contour size: " << contour.size() << endl;
 
 	// Draw the contour
 	//renderContour(*window, contour);
