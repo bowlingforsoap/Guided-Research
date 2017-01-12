@@ -46,6 +46,7 @@ struct Line {
 };
 
 // All lines that belong to this contour.
+vector<vector<Point>> getContour(GLvoid* feedback, int contourTexSize) {
 	// Final result container
 	vector<vector<Point>> contour;
 	// Complete contour lines assembled from primitives (small line pieces) stored in feedback
@@ -54,9 +55,11 @@ struct Line {
 	// Get data from feedback
 	vector<GLfloat> feedbackVector;
 	// Primitive is a line: 2 verts with 2 floats per vertex
+	feedbackVector.resize(contourTexSize);
 	// Copy data from feedback buffer to feedbackVector for future manipulations
 	memcpy(&feedbackVector[0], feedback, feedbackVector.size() * sizeof(GLfloat));
 
+	for (int i = 0; i < contourTexSize; i = i + 4)
 	{
 		
 	}
