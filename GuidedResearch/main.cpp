@@ -50,7 +50,7 @@ int main() {
 	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
 
 	// Scalar Field setup
-	GLint fieldWidth = 100, fieldHeight = 100;
+	const GLint fieldWidth = 100, fieldHeight = 100;
 	GLfloat* scalarField = 0;
 	GLint* fieldCoords = 0;
 	GLint fieldCoordsSize;
@@ -100,7 +100,7 @@ int main() {
 	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 1, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
 	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 2, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
 	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 3, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
-	glBindImageTexture(1, contourTex, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RED);
+	glBindImageTexture(1, contourTex, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32F);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 	
 	// Set uniforms
@@ -117,6 +117,18 @@ int main() {
 
 	glDispatchCompute(1, 100, 1);
 	glfwSwapBuffers(window);
+
+	const int contourTexSize = fieldWidth * fieldHeight * 4;
+	GLfloat contourTexData[contourTexSize];
+	glGetTexImage(GL_TEXTURE_2D_ARRAY, 0, GL_RED, GL_FLOAT, contourTexData);
+	// TODO: what's up with that error?
+	GL_ERROR_CHECK
+	cout << "contourTexData: ";
+	for (int i = 0; i < 12; i++) {
+		if (contourTexData[i] != -107374176)
+			cout << setprecision(100) << "[i:" << i << ",  "<< contourTexData[i] << "] ";
+	}
+	cout << "." << endl;
 
 	// Sort the primitives and retrieve the contour
 	// TODO: alter contour recreation to fit texture data
