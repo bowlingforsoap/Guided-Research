@@ -5,7 +5,7 @@ layout (local_size_x = 100, local_size_y = 1) in;
 // Input scalar field
 layout (binding = 0, r32f) uniform image2D scalarField;
 // Reconstructed contour
-layout (binding = 1, r32f) uniform image2DArray contour;
+layout (binding = 1, rg32f) uniform image2DArray contour;
 uniform vec3 isoValue;
 uniform vec2 domainUpperBound;
 
@@ -23,21 +23,7 @@ void emit(vec2 p1_NDCposition, vec2 p2_NDCposition,
 {
   float fraction = (isoValue - p1_intensity) / (p2_intensity - p1_intensity);
   vec2 vertex_NDCposition = mix(p1_NDCposition, p2_NDCposition, fraction);
-  imageStore(contour, ivec3(gl_GlobalInvocationID.xy, vertexIndex), vec4(vertex_NDCposition.x, 0.f, 0.f, 0.f));
-  //gl_Position = vec4(vertex_NDCposition, 0.f, 1.f);
-  //EmitVertex();
-}
-
-void test(vec2 center, float size) {
-  /*gl_Position = vec4(center.x - size, center.y - size, 0.f, 1.f);
-  EmitVertex();
-  gl_Position = vec4(center.x - size, center.y + size, 0.f, 1.f);
-  EmitVertex();
-  gl_Position = vec4(center.x + size, center.y + size, 0.f, 1.f);
-  EmitVertex();
-  gl_Position = vec4(center.x - size, center.y - size, 0.f, 1.f);
-  EmitVertex();
-  EndPrimitive();*/
+  imageStore(contour, ivec3(gl_GlobalInvocationID.xy, vertexIndex), vec4(vertex_NDCposition.xy, 0.f, 0.f));
 }
 
 /*

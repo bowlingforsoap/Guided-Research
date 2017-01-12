@@ -16,9 +16,6 @@ inline void generateScalarField(GLfloat* &scalarField, GLint width, GLint height
 // Print contents of currently bound GL_TRANSFORM_FEEDBACK_BUFFER as GLfloat.
 inline void printBufferContents(int buffer, GLintptr offset, GLsizei length);
 
-// Renders Transform Feedback results.
-inline void testTransformFeedback(int numPrimitives, GLFWwindow& window, GLuint& prevTFBO);
-
 int main() {
 	GLint width = 1600, height = 1000;
 	GLFWwindow* window = glfwInitialize(width, height, "Guided Research", 4, 3, false);
@@ -51,8 +48,8 @@ int main() {
 
 	// Scalar Field setup
 	const GLint fieldWidth = 100, fieldHeight = 100;
-	GLfloat* scalarField = 0;
-	GLint* fieldCoords = 0;
+	GLfloat* scalarField = nullptr;
+	GLint* fieldCoords = nullptr;
 	GLint fieldCoordsSize;
 	generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -3, 3, 3, fieldCoords, fieldCoordsSize);
 
@@ -94,13 +91,13 @@ int main() {
 	GLuint contourTex;
 	glGenTextures(1, &contourTex);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
-	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_R32F, fieldWidth, fieldHeight, 4);
+	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RG32F, fieldWidth, fieldHeight, 4);
 	// No need to use, to fill with empty ddata. When used with nullptr as a data, causes access violation.
 	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
 	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 1, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
 	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 2, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
 	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 3, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
-	glBindImageTexture(1, contourTex, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32F);
+	glBindImageTexture(1, contourTex, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RG32F);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 	
 	// Set uniforms
@@ -116,16 +113,21 @@ int main() {
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glDispatchCompute(1, 100, 1);
+	// Ensure that writes by the compute shader have completed 
+	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	glfwSwapBuffers(window);
 
-	const int contourTexSize = fieldWidth * fieldHeight * 4;
+	// Read back the 2D array texture
+	const int contourTexSize = fieldWidth * fieldHeight * 2 * 4;
 	GLfloat contourTexData[contourTexSize];
-	glGetTexImage(GL_TEXTURE_2D_ARRAY, 0, GL_RED, GL_FLOAT, contourTexData);
-	// TODO: what's up with that error?
-	GL_ERROR_CHECK
+	cout << "sizeof(contourTexData): " << sizeof(contourTexData) << endl;
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
+	glGetTexImage(GL_TEXTURE_2D_ARRAY, 0, GL_RG, GL_FLOAT, contourTexData);
+//	cout << "contourTexData[contourTexSize - 1]: " << contourTexData[contourTexSize - 1] << endl;
 	cout << "contourTexData: ";
-	for (int i = 0; i < 12; i++) {
-		if (contourTexData[i] != -107374176)
+	for (int i = 0; i < contourTexSize; i++) {
+		if (contourTexData[i] != 0)
 			cout << setprecision(100) << "[i:" << i << ",  "<< contourTexData[i] << "] ";
 	}
 	cout << "." << endl;
