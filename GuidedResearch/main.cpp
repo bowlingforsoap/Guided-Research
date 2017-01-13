@@ -122,7 +122,7 @@ int main() {
 
 	// Read back the 2D array texture
 	const int contourTexSize = fieldWidth * fieldHeight * 2 * 4; // Texture size * components per element * layers in array texture
-	GLfloat contourTexData[contourTexSize];
+	GLfloat contourTexData[fieldWidth * 4][fieldHeight * 2];
 	cout << "sizeof(contourTexData): " << sizeof(contourTexData) << endl;
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
@@ -131,12 +131,12 @@ int main() {
 	cout << "contourTexData: ";
 	for (int i = 1200; i < 1220; i++) {
 		//if (contourTexData[i] != 0)
-			cout << setprecision(100) << "[i:" << i << ",  "<< contourTexData[i] << "] ";
+			cout << setprecision(100) << "[i:" << i << ",  "<< contourTexData[i / 200][i % 200] << "] ";
 	}
 	cout << "." << endl;
 
 	// Sort the primitives and retrieve the contour
-	vector<vector<Point>> contour = getContour(contourTexData, contourTexSize);
+	vector<vector<Point>> contour = getContour(contourTexData);
 	cout << "contour size: " << contour.size() << endl;
 
 	// Draw the contour
