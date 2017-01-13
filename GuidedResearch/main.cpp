@@ -18,7 +18,7 @@ inline void printBufferContents(int buffer, GLintptr offset, GLsizei length);
 
 int main() {
 	GLint width = 1600, height = 1000;
-	GLFWwindow* window = glfwInitialize(width, height, "Guided Research", 4, 3, false);
+	GLFWwindow* window = glfwInitialize(width, height, "Guided Research", 4, 4, false);
 	glewInit();
 	glViewport(0, 0, width, height);
 
@@ -89,9 +89,12 @@ int main() {
 	// Setup the output image for the texture
 	glActiveTexture(GL_TEXTURE1);
 	GLuint contourTex;
+	const GLfloat dummyValue = 666.f;
 	glGenTextures(1, &contourTex);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
 	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RG32F, fieldWidth, fieldHeight, 4);
+	glClearTexImage(contourTex, 0, GL_RG, GL_FLOAT, &dummyValue);
+	GL_ERROR_CHECK
 	// No need to use, to fill with empty ddata. When used with nullptr as a data, causes access violation.
 	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
 	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 1, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
@@ -118,7 +121,7 @@ int main() {
 	glfwSwapBuffers(window);
 
 	// Read back the 2D array texture
-	const int contourTexSize = fieldWidth * fieldHeight * 2 * 4;
+	const int contourTexSize = fieldWidth * fieldHeight * 2 * 4; // Texture size * components per element * layers in array texture
 	GLfloat contourTexData[contourTexSize];
 	cout << "sizeof(contourTexData): " << sizeof(contourTexData) << endl;
 	glActiveTexture(GL_TEXTURE1);
@@ -126,8 +129,8 @@ int main() {
 	glGetTexImage(GL_TEXTURE_2D_ARRAY, 0, GL_RG, GL_FLOAT, contourTexData);
 //	cout << "contourTexData[contourTexSize - 1]: " << contourTexData[contourTexSize - 1] << endl;
 	cout << "contourTexData: ";
-	for (int i = 0; i < contourTexSize; i++) {
-		if (contourTexData[i] != 0)
+	for (int i = 1200; i < 1220; i++) {
+		//if (contourTexData[i] != 0)
 			cout << setprecision(100) << "[i:" << i << ",  "<< contourTexData[i] << "] ";
 	}
 	cout << "." << endl;
