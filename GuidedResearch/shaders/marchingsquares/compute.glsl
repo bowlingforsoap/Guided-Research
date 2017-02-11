@@ -1,12 +1,13 @@
 #version 440 core
 
-layout (local_size_x = 100, local_size_y = 1) in;
+layout (local_size_x = 5, local_size_y = 1) in;
 
 // Input scalar field
 layout (binding = 0, r32f) uniform image2D scalarField;
 // Reconstructed contour
 layout (binding = 1, rg32f) uniform image2DArray contour;
 uniform vec3 isoValue;
+// vec2(fieldWidth - 1, fieldHeight - 1)
 uniform vec2 domainUpperBound;
 
 /**
@@ -102,7 +103,6 @@ void main() {
 
 
   // .. and the NDC coordinates of these corner points.
-  // TODO: unhardcore 100
   vec2 ul_NDCposition = (ul / domainUpperBound - .5f) * 2.f;
   vec2 ur_NDCposition = (ur / domainUpperBound - .5f) * 2.f;
   vec2 ll_NDCposition = (ll / domainUpperBound - .5f) * 2.f;

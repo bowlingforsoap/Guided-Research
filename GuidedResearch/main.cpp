@@ -47,7 +47,7 @@ int main() {
 	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
 
 	// Scalar Field setup
-	const GLint fieldWidth = 100, fieldHeight = 100;
+	const GLint fieldWidth = 5, fieldHeight = 5;
 	GLfloat* scalarField = nullptr;
 	GLint* fieldCoords = nullptr;
 	GLint fieldCoordsSize;
@@ -117,7 +117,7 @@ int main() {
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	// COMPUTER SHADER
-	glDispatchCompute(1, 100, 1);
+	glDispatchCompute(1, 5, 1);
 	// Ensure that writes by the compute shader have completed
 	glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
 	glfwSwapBuffers(window);
@@ -129,20 +129,17 @@ int main() {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
 	glGetTexImage(GL_TEXTURE_2D_ARRAY, 0, GL_RG, GL_FLOAT, contourTexData);
-	/*cout << "contourTexData[contourTexSize - 1]: " << contourTexData[contourTexSize - 1] << endl;
 	cout << "contourTexData: ";
-	for (int i = 0; i < fieldWidth * 4; ++i)
+	for (int i = 0; i < fieldWidth * 4; ++i) 
 	{
 		for (int j = 0; j < fieldHeight * 2; ++j)
 		{
-			if (contourTexData[i][j] != dummyValue)
-				cout << setprecision(100) << "[i:" << i << ",  j:" << j << ", " << contourTexData[i][j] << "] ";
+			if ((contourTexData[i][j] > 1.f || contourTexData[i][j] < -1.f) && contourTexData[i][j] != dummyValue)
+			{
+				cout << "[" << i << "][" << j << "]:" << contourTexData[i][j] << endl;
+			}
 		}
-	}*/
-	/*for (int i = 1200; i < 1220; i++) {
-		//if (contourTexData[i] != 0)
-			cout << setprecision(100) << "[i:" << i << ",  "<< contourTexData[i / 200][i % 200] << "] ";
-	}*/
+	}
 	cout << "." << endl;
 
 	// Sort the primitives and retrieve the contour

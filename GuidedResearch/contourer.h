@@ -72,7 +72,7 @@ template <size_t rows, size_t cols>
 void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& contourLine, GLfloat(&feedback)[rows][cols], const int& i, const int& j, const Line& dummyLine, const GLint& fieldWidth);
 
 // Tries to connect two compareLine to currLine. On sucess, returns true and alters currLine; on failure returns false.
-inline bool connectedLines(Line& currLine, Line& compareLine, const Line& dummyLine, vector<Point>& contourLine, bool& lineSegmentIsLast);
+inline bool connectedLines(Line& currLine, Line& compareLine, const Line& dummyLine, vector<Point>& contourLine);
 
 // Returns all lines that belong to this contour.
 template <size_t rows, size_t cols>
@@ -105,7 +105,7 @@ vector<vector<Point>> getContour(GLfloat (&feedback)[rows][cols], const GLint& f
 
 				Line currLine = currLines[l];
 
-				assert(currLine.begin.x != dummyValue && currLine.end.x != dummyValue && currLine.begin.y != dummyValue && currLine.end.y != dummyValue);
+//				assert(currLine.begin.x != dummyValue && currLine.end.x != dummyValue && currLine.begin.y != dummyValue && currLine.end.y != dummyValue);
 
 				contourLine.push_back(currLine.begin);
 				contourLine.push_back(currLine.end);
@@ -128,10 +128,18 @@ vector<vector<Point>> getContour(GLfloat (&feedback)[rows][cols], const GLint& f
 template <size_t rows, size_t cols>
 void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& contourLine, GLfloat(&feedback)[rows][cols], const int& i, const int& j, const Line& dummyLine, const GLint& fieldWidth)
 {
+	// Clear the data for the current square
+	// TODO: check if causes trouble
+	feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j] = dummyLine.begin.x;
+	feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j + 1] = dummyLine.begin.y;
+	feedback[i + (lineSegmentNumberInSquare * 2 + 1) * fieldWidth][j] = dummyLine.end.x;
+	feedback[i + (lineSegmentNumberInSquare * 2 + 1) * fieldWidth][j + 1] = dummyLine.end.y;
+
 	// Get line segments for squares around current
+	//
 	Line lineSegmentsAround[8];
 	// (i + 1, j)
-	if (i % (fieldWidth - 1) != 0) { // if we are not line-wise at the border of a layer
+	if (i % (fieldWidth - 1) != 0 || i == 0) { // if we are not line-wise at the border of a layer
 		lineSegmentsAround[0] = {
 			Point{ feedback[i + 1][j], feedback[i + 1][j + 1] },
 			Point{ feedback[i + 1 + fieldWidth][j], feedback[i + 1 + fieldWidth][j + 1] }
@@ -140,7 +148,7 @@ void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& 
 			Point{ feedback[i + 1 + fieldWidth * 2][j], feedback[i + 1 + fieldWidth * 2][j + 1] },
 			Point{ feedback[i + 1 + fieldWidth * 3][j], feedback[i + 1 + fieldWidth * 3][j + 1] }
 		};
-	} else if (i != 0)
+	} else
 	{
 		lineSegmentsAround[0] = dummyLine;
 		lineSegmentsAround[1] = dummyLine;
@@ -161,7 +169,7 @@ void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& 
 		lineSegmentsAround[3] = dummyLine;
 	}
 	// (i, j + 1)
-	if (j % (cols - 2) != 0) { // if we are not column-wise at the border of a layer
+	if (j % (cols - 2) != 0 || j == 0) { // if we are not column-wise at the border of a layer
 		lineSegmentsAround[4] = {
 			Point{ feedback[i][j + 2], feedback[i][j + 1 + 2] },
 			Point{ feedback[i + fieldWidth][j + 2], feedback[i + fieldWidth][j + 1 + 2] }
@@ -170,7 +178,7 @@ void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& 
 			Point{ feedback[i + fieldWidth * 2][j + 2], feedback[i + fieldWidth * 2][j + 1 + 2] },
 			Point{ feedback[i + fieldWidth * 3][j + 2], feedback[i + fieldWidth * 3][j + 1 + 2] }
 		};
-	} else if (j != 0)
+	} else
 	{
 		lineSegmentsAround[4] = dummyLine;
 		lineSegmentsAround[5] = dummyLine;
@@ -191,11 +199,10 @@ void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& 
 		lineSegmentsAround[7] = dummyLine;
 	}
 
-
-	bool connectedLinesFlag = false;
-	bool lineSegmentIsLast = false;
 	// Compare line with linesAround
 	// Trace contour for this line
+	//
+	bool connectedLinesFlag = false;
 	for (int k = 0; k < 8; k++)
 	{
 		Line compareLineSegment = lineSegmentsAround[k];
@@ -203,20 +210,12 @@ void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& 
 		{
 			continue;
 		}
-		assert(compareLineSegment.begin.x != dummyLine.begin.x && compareLineSegment.end.x != dummyLine.begin.x && compareLineSegment.begin.y != dummyLine.begin.x && compareLineSegment.end.y != dummyLine.begin.x);
 
-		connectedLinesFlag = connectedLines(currLine, compareLineSegment, dummyLine, contourLine, lineSegmentIsLast);
-		if (connectedLinesFlag && !lineSegmentIsLast)
+//		assert(compareLineSegment.begin.x != dummyLine.begin.x && compareLineSegment.end.x != dummyLine.begin.x && compareLineSegment.begin.y != dummyLine.begin.x && compareLineSegment.end.y != dummyLine.begin.x);
+
+		connectedLinesFlag = connectedLines(currLine, compareLineSegment, dummyLine, contourLine);
+		if (connectedLinesFlag)
 		{
-			//contourLine.push_back(currLine.begin);
-
-			// Clear the data for the current square
-			// TODO: check if causes trouble
-			feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j] = dummyLine.begin.x;
-			feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j + 1] = dummyLine.begin.y;
-			feedback[i + (lineSegmentNumberInSquare * 2 + 1) * fieldWidth][j] = dummyLine.end.x;
-			feedback[i + (lineSegmentNumberInSquare * 2 + 1) * fieldWidth][j + 1] = dummyLine.end.y;
-
 			// Go to the next square
 			if (k == 0 || k == 1)
 			{
@@ -236,75 +235,56 @@ void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& 
 			}
 
 			// By not breaking the loop, we force algorithm to trace contour in a direction opposite to the one chosen before
-		} else if (lineSegmentIsLast)
-		{
-			break;
 		}
 	}
 
-	// Cannot happen
-	/*if (!connectedLinesFlag) {
-		// If line segment was process, but doesn't connect to anything -> it's the last segment
-		// Clear the data for the current square
-		feedback[i + l * 2 * fieldWidth][j] = dummyLine.begin.x;
-		feedback[i + l * 2 * fieldWidth][j + 1] = dummyLine.begin.y;
-		feedback[i + (l * 2 + 1) * fieldWidth][j] = dummyLine.end.x;
-		feedback[i + (l * 2 + 1) * fieldWidth][j + 1] = dummyLine.end.y;
 
-		// Close the line segment
-		contourLine.push_back(currLine.begin);
-		contourLine.push_back(currLine.end);
-	}*/
+	// If line segment was processed, but doesn't connect to anything -> it's the last segment
+	// Clear the data for the current square
+/*	feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j] = dummyLine.begin.x;
+	feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j + 1] = dummyLine.begin.y;
+	feedback[i + (lineSegmentNumberInSquare * 2 + 1) * fieldWidth][j] = dummyLine.end.x;
+	feedback[i + (lineSegmentNumberInSquare * 2 + 1) * fieldWidth][j + 1] = dummyLine.end.y;*/
 }
 
 // Definition.
-inline bool connectedLines(Line& currLine, Line& compareLine, const Line& dummyLine, vector<Point>& contourLine, bool& lineSegmentIsLast)
+inline bool connectedLines(Line& currLine, Line& compareLine, const Line& dummyLine, vector<Point>& contourLine)
 {
 	if (currLine.end == compareLine.begin)
 	{
-		if (compareLine.end != dummyLine.end)
-		{
+//		if (compareLine.end != dummyLine.end)
+//		{
 			contourLine.push_back(compareLine.end);
 			currLine.end = compareLine.end;
-		} else
-		{
-			lineSegmentIsLast = true;
-		}
+//		}
 
 		return true;
 	}
 	else if (currLine.end == compareLine.end)
 	{
-		if (compareLine.begin != dummyLine.end)
-		{
+//		if (compareLine.begin != dummyLine.end)
+//		{
 			contourLine.push_back(compareLine.begin);
 			currLine.end = compareLine.begin;
-		} else
-		{
-			lineSegmentIsLast = true;
-		}
+//		} 
+	
 		return true;
 	}
 	else if (currLine.begin == compareLine.begin)
 	{
-		if (compareLine.end != dummyLine.end) {
+//		if (compareLine.end != dummyLine.end) {
 			contourLine.insert(contourLine.begin(), compareLine.end);
 			currLine.begin = compareLine.end;
-		} else
-		{
-			lineSegmentIsLast = true;
-		}
+//		}
+
 		return true;
 	}
 	else if (currLine.begin == compareLine.end)
 	{
-		if (compareLine.begin != dummyLine.end) {
+//		if (compareLine.begin != dummyLine.end) {
 			contourLine.insert(contourLine.begin(), compareLine.begin);
 			currLine.begin = compareLine.begin;
-		} else
-		{
-			lineSegmentIsLast = true;
-		}
+//		} 
 
 		return true;
 	}
