@@ -29,12 +29,12 @@ int main() {
 	glShaderSource(computeShader, 1, &computeSrc, NULL);
 	glCompileShader(computeShader);
 	Shader::checkShaderCompilationStatus(computeShader, computeSrc);
-	// Setup compute program 
+	// Setup compute program
 	GLuint computeProgram = glCreateProgram();
 	glAttachShader(computeProgram, computeShader);
 	glLinkProgram(computeProgram);
 	Shader::checkProgramLinkingStatus(computeProgram);
-
+	// Delete shader
 	glDeleteShader(computeShader);
 
 	// Check some OpenGL capabilities
@@ -73,7 +73,7 @@ int main() {
 		cout << fieldCoords[i] << ", ";
 	}*/
 
-	
+
 
 	// Store scalar field into a texture
 	glActiveTexture(GL_TEXTURE0);
@@ -90,10 +90,11 @@ int main() {
 	glActiveTexture(GL_TEXTURE1);
 	GLuint contourTex;
 	const GLfloat dummyValue = 666.f;
+	GLfloat dummyArray[2]{dummyValue, dummyValue};
 	glGenTextures(1, &contourTex);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
 	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RG32F, fieldWidth, fieldHeight, 4);
-	glClearTexImage(contourTex, 0, GL_RG, GL_FLOAT, &dummyValue);
+	glClearTexImage(contourTex, 0, GL_RG, GL_FLOAT, &dummyArray[0]);
 	GL_ERROR_CHECK
 	// No need to use, to fill with empty ddata. When used with nullptr as a data, causes access violation.
 	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
@@ -102,7 +103,7 @@ int main() {
 	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 3, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
 	glBindImageTexture(1, contourTex, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RG32F);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-	
+
 	// Set uniforms
 	glUseProgram(computeProgram);
 	glUniform3f(glGetUniformLocation(computeProgram, "isoValue"), .5f, .4f, .8f);
@@ -115,9 +116,10 @@ int main() {
 	glClearColor(0.1f, 0.2, 0.1f, 1.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
+	// COMPUTER SHADER
 	glDispatchCompute(1, 100, 1);
-	// Ensure that writes by the compute shader have completed 
-	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+	// Ensure that writes by the compute shader have completed
+	glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
 	glfwSwapBuffers(window);
 
 	// Read back the 2D array texture
@@ -127,21 +129,30 @@ int main() {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
 	glGetTexImage(GL_TEXTURE_2D_ARRAY, 0, GL_RG, GL_FLOAT, contourTexData);
-//	cout << "contourTexData[contourTexSize - 1]: " << contourTexData[contourTexSize - 1] << endl;
+	/*cout << "contourTexData[contourTexSize - 1]: " << contourTexData[contourTexSize - 1] << endl;
 	cout << "contourTexData: ";
-	for (int i = 1200; i < 1220; i++) {
+	for (int i = 0; i < fieldWidth * 4; ++i)
+	{
+		for (int j = 0; j < fieldHeight * 2; ++j)
+		{
+			if (contourTexData[i][j] != dummyValue)
+				cout << setprecision(100) << "[i:" << i << ",  j:" << j << ", " << contourTexData[i][j] << "] ";
+		}
+	}*/
+	/*for (int i = 1200; i < 1220; i++) {
 		//if (contourTexData[i] != 0)
 			cout << setprecision(100) << "[i:" << i << ",  "<< contourTexData[i / 200][i % 200] << "] ";
-	}
+	}*/
 	cout << "." << endl;
 
 	// Sort the primitives and retrieve the contour
-	vector<vector<Point>> contour = getContour(contourTexData);
+	vector<vector<Point>> contour = getContour(contourTexData, fieldWidth, fieldHeight, dummyValue);
 	cout << "contour size: " << contour.size() << endl;
+
 
 	// Draw the contour
 	//renderContour(*window, contour);
-		
+
 	system("pause");
 	glfwTerminate();
 	return 666;

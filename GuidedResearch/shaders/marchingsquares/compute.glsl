@@ -81,7 +81,7 @@ void emitIsoContour(float isoValue, float ul_intensity, float ur_intensity, floa
     else if (bitfield == 7)
     {
         emit(ul_NDCposition, ur_NDCposition, ul_intensity, ur_intensity, isoValue, 0);
-        emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue, 0);
+        emit(lr_NDCposition, ur_NDCposition, lr_intensity, ur_intensity, isoValue, 1);
     }
 }
 
