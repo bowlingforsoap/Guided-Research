@@ -113,23 +113,23 @@ int main() {
 	glUniform1i(glGetUniformLocation(computeProgram, "scalarField"), 0);
 	glUniform1i(glGetUniformLocation(computeProgram, "contour"), 1);
 
-	glClearColor(0.1f, 0.2, 0.1f, 1.f);
-	glClear(GL_COLOR_BUFFER_BIT);
+//	glClearColor(0.1f, 0.2, 0.1f, 1.f);
+//	glClear(GL_COLOR_BUFFER_BIT);
 
 	// COMPUTER SHADER
 	glDispatchCompute(1, 5, 1);
 	// Ensure that writes by the compute shader have completed
 	glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
-	glfwSwapBuffers(window);
+	//glfwSwapBuffers(window);
 
 	// Read back the 2D array texture
-	const int contourTexSize = fieldWidth * fieldHeight * 2 * 4; // Texture size * components per element * layers in array texture
+//	const int contourTexSize = fieldWidth * fieldHeight * 2 * 4; // Texture size * components per element * layers in array texture
 	GLfloat contourTexData[fieldWidth * 4][fieldHeight * 2];
 	cout << "sizeof(contourTexData): " << sizeof(contourTexData) << endl;
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
 	glGetTexImage(GL_TEXTURE_2D_ARRAY, 0, GL_RG, GL_FLOAT, contourTexData);
-	cout << "contourTexData: ";
+	cout << "contourTexData with values outside [-1;1] range: ";
 	for (int i = 0; i < fieldWidth * 4; ++i) 
 	{
 		for (int j = 0; j < fieldHeight * 2; ++j)
@@ -141,6 +141,7 @@ int main() {
 		}
 	}
 	cout << "." << endl;
+	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
 	// Sort the primitives and retrieve the contour
 	vector<vector<Point>> contour = getContour(contourTexData, fieldWidth, fieldHeight, dummyValue);
