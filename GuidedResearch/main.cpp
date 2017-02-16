@@ -16,6 +16,32 @@ inline void generateScalarField(GLfloat* &scalarField, GLint width, GLint height
 // Print contents of currently bound GL_TRANSFORM_FEEDBACK_BUFFER as GLfloat.
 inline void printBufferContents(int buffer, GLintptr offset, GLsizei length);
 
+template<size_t cols, size_t rows>
+void printImageContents(const GLuint& contourTex, GLfloat(&contourTexData)[cols][rows], const GLfloat& dummyValue) {
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
+	glGetTexImage(GL_TEXTURE_2D_ARRAY, 0, GL_RG, GL_FLOAT, contourTexData);
+	cout << "contourTexData: \n";
+	for (int i = 0; i < rows; ++i)
+	{
+		/*if (i % 5 == 0)
+		{
+			cout << '\n';
+		}*/
+
+		for (int j = 0; j < cols; j = j + 2)
+		{
+			{
+				if (contourTexData[i][j] != dummyValue && contourTexData[i][j + 1] != dummyValue && contourTexData[i][j] > 1.f && contourTexData[i][j] < -1.f && contourTexData[i][j + 1] > 1.f && contourTexData[i][j + 1] < -1.f)
+					cout << "(" << contourTexData[i][j] << ", " << contourTexData[i][j + 1] << "), ";
+			}
+		}
+		//cout << '\n';
+	}
+	//cout << "." << endl;
+	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+}
+
 int main() {
 	GLint width = 1600, height = 1000;
 	GLFWwindow* window = glfwInitialize(width, height, "Guided Research", 4, 4, false);
@@ -47,8 +73,8 @@ int main() {
 	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
 
 	// Scalar Field setup
-	const GLint fieldWidth = 5;
-	const GLint fieldHeight = 5;
+	const GLint fieldWidth = 100;
+	const GLint fieldHeight = 100;
 	GLfloat* scalarField = nullptr;
 	GLint* fieldCoords = nullptr;
 	GLint fieldCoordsSize;
@@ -96,12 +122,6 @@ int main() {
 	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
 	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RG32F, fieldWidth, fieldHeight, 4);
 	glClearTexImage(contourTex, 0, GL_RG, GL_FLOAT, &dummyArray[0]);
-	GL_ERROR_CHECK
-	// No need to use, to fill with empty ddata. When used with nullptr as a data, causes access violation.
-	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
-	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 1, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
-	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 2, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
-	//glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 3, fieldWidth, fieldHeight, 4, GL_RED, GL_FLOAT, nullptr);
 	glBindImageTexture(1, contourTex, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RG32F);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
@@ -126,31 +146,9 @@ int main() {
 	//glfwSwapBuffers(window);
 
 	// Read back the 2D array texture
-//	const int contourTexSize = fieldWidth * fieldHeight * 2 * 4; // Texture size * components per element * layers in array texture
 	GLfloat contourTexData[fieldWidth * 4][fieldHeight * 2];
 	cout << "sizeof(contourTexData): " << sizeof(contourTexData) << endl;
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
-	glGetTexImage(GL_TEXTURE_2D_ARRAY, 0, GL_RG, GL_FLOAT, contourTexData);
-	cout << "contourTexData with values outside [-1;1] range: \n";
-	for (int i = 0; i < fieldWidth * 4; ++i) 
-	{
-		if (i % 5 == 0)
-		{
-			cout << '\n';
-		}
-
-		for (int j = 0; j < fieldHeight * 2; j = j + 2)
-		{
-			//if ((contourTexData[i][j] > 1.f || contourTexData[i][j] < -1.f) && contourTexData[i][j] != dummyValue)
-			{
-				cout << "(" << contourTexData[i][j] << ", "<< contourTexData[i][j + 1] << "), ";
-			}
-		}
-		cout << '\n';
-	}
-	cout << "." << endl;
-	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+	printImageContents(contourTex, contourTexData, dummyValue);
 
 	// Sort the primitives and retrieve the contour
 	vector<vector<Point>> contour = getContour(contourTexData, fieldWidth, fieldHeight, dummyValue);

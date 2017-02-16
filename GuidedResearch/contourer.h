@@ -128,14 +128,16 @@ vector<vector<Point>> getContour(GLfloat (&feedback)[rows][cols], const GLint& f
 template <size_t rows, size_t cols>
 void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& contourLine, GLfloat(&feedback)[rows][cols], const int& i, const int& j, const Line& dummyLine, const GLint& fieldWidth)
 {
+	if (contourLine.size() == 138) {
+		int debug = 1;
+	}
 	// Clear the data for the current square
-	// TODO: check if causes trouble
 	feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j] = dummyLine.begin.x;
 	feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j + 1] = dummyLine.begin.y;
 	feedback[i + (lineSegmentNumberInSquare * 2 + 1) * fieldWidth][j] = dummyLine.end.x;
 	feedback[i + (lineSegmentNumberInSquare * 2 + 1) * fieldWidth][j + 1] = dummyLine.end.y;
 
-	// Get line segments for squares around current
+	// Get line segments for squares around the current one
 	//
 	Line lineSegmentsAround[8];
 	// (i + 1, j)
@@ -168,7 +170,7 @@ void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& 
 		lineSegmentsAround[2] = dummyLine;
 		lineSegmentsAround[3] = dummyLine;
 	}
-	// (i, j + 1)
+	// (i, j + 2)
 	if (j % (cols - 2) != 0 || j == 0) { // if we are not column-wise at the border of a layer
 		lineSegmentsAround[4] = {
 			Point{ feedback[i][j + 2], feedback[i][j + 1 + 2] },
@@ -183,7 +185,7 @@ void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& 
 		lineSegmentsAround[4] = dummyLine;
 		lineSegmentsAround[5] = dummyLine;
 	}
-	// (i, j - 1)
+	// (i, j - 2)
 	if (j != 0) { // if we are not column-wise at the border of a layer from the other side
 		lineSegmentsAround[6] = {
 			Point{ feedback[i][j - 2], feedback[i][j - 2 + 1] },
@@ -250,41 +252,35 @@ void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& 
 // Definition.
 inline bool connectedLines(Line& currLine, Line& compareLine, const Line& dummyLine, vector<Point>& contourLine)
 {
+	if (currLine.end == compareLine.begin && currLine.begin == compareLine.end) {
+		return false;
+	}
+
 	if (currLine.end == compareLine.begin)
 	{
-//		if (compareLine.end != dummyLine.end)
-//		{
-			contourLine.push_back(compareLine.end);
-			currLine.end = compareLine.end;
-//		}
+		contourLine.push_back(compareLine.end);
+		currLine.end = compareLine.end;
 
 		return true;
 	}
 	else if (currLine.end == compareLine.end)
 	{
-//		if (compareLine.begin != dummyLine.end)
-//		{
-			contourLine.push_back(compareLine.begin);
-			currLine.end = compareLine.begin;
-//		} 
+		contourLine.push_back(compareLine.begin);
+		currLine.end = compareLine.begin;
 	
 		return true;
 	}
 	else if (currLine.begin == compareLine.begin)
 	{
-//		if (compareLine.end != dummyLine.end) {
-			contourLine.insert(contourLine.begin(), compareLine.end);
-			currLine.begin = compareLine.end;
-//		}
+		contourLine.insert(contourLine.begin(), compareLine.end);
+		currLine.begin = compareLine.end;
 
 		return true;
 	}
 	else if (currLine.begin == compareLine.end)
 	{
-//		if (compareLine.begin != dummyLine.end) {
-			contourLine.insert(contourLine.begin(), compareLine.begin);
-			currLine.begin = compareLine.begin;
-//		} 
+		contourLine.insert(contourLine.begin(), compareLine.begin);
+		currLine.begin = compareLine.begin;
 
 		return true;
 	}
