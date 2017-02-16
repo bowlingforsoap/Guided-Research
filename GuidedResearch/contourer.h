@@ -87,6 +87,12 @@ vector<vector<Point>> getContour(GLvoid* feedback, int numPrimitives) {
 
 				Line l2 = { Point{feedbackVector[i], feedbackVector[i + 1]}, Point{ feedbackVector[i + 2], feedbackVector[i + 3]} };
 
+				// Prevents dublicating the first point
+				if (l1.end == l2.begin && l1.begin == l2.end) {
+					feedbackVector.erase(feedbackVector.begin() + i, feedbackVector.begin() + i + 4);
+					break;
+				}
+
 				// If l2 continues l1
 				if (l1.end == l2.begin) {
 					// Add it l2 to the back of contourLine
@@ -127,6 +133,12 @@ vector<vector<Point>> getContour(GLvoid* feedback, int numPrimitives) {
 				}
 
 				Line l2 = { Point{ feedbackVector[i], feedbackVector[i + 1] }, Point{ feedbackVector[i + 2], feedbackVector[i + 3] } };
+
+				// Prevents dublicating the first point
+				if (l1.end == l2.begin && l1.begin == l2.end) {
+					feedbackVector.erase(feedbackVector.begin() + i, feedbackVector.begin() + i + 4);
+					break;
+				}
 
 				// If l1 continues l2
 				if (l1.begin == l2.end) {
