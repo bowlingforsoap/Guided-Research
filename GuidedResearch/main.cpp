@@ -47,7 +47,8 @@ int main() {
 	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
 
 	// Scalar Field setup
-	const GLint fieldWidth = 5, fieldHeight = 5;
+	const GLint fieldWidth = 5;
+	const GLint fieldHeight = 5;
 	GLfloat* scalarField = nullptr;
 	GLint* fieldCoords = nullptr;
 	GLint fieldCoordsSize;
@@ -117,9 +118,11 @@ int main() {
 //	glClear(GL_COLOR_BUFFER_BIT);
 
 	// COMPUTER SHADER
-	glDispatchCompute(1, 5, 1);
+	glDispatchCompute(fieldWidth - 1, fieldHeight - 1, 1);
 	// Ensure that writes by the compute shader have completed
-	glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
+	//glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
+	glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
 	//glfwSwapBuffers(window);
 
 	// Read back the 2D array texture
@@ -129,16 +132,22 @@ int main() {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
 	glGetTexImage(GL_TEXTURE_2D_ARRAY, 0, GL_RG, GL_FLOAT, contourTexData);
-	cout << "contourTexData with values outside [-1;1] range: ";
+	cout << "contourTexData with values outside [-1;1] range: \n";
 	for (int i = 0; i < fieldWidth * 4; ++i) 
 	{
-		for (int j = 0; j < fieldHeight * 2; ++j)
+		if (i % 5 == 0)
 		{
-			if ((contourTexData[i][j] > 1.f || contourTexData[i][j] < -1.f) && contourTexData[i][j] != dummyValue)
+			cout << '\n';
+		}
+
+		for (int j = 0; j < fieldHeight * 2; j = j + 2)
+		{
+			//if ((contourTexData[i][j] > 1.f || contourTexData[i][j] < -1.f) && contourTexData[i][j] != dummyValue)
 			{
-				cout << "[" << i << "][" << j << "]:" << contourTexData[i][j] << endl;
+				cout << "(" << contourTexData[i][j] << ", "<< contourTexData[i][j + 1] << "), ";
 			}
 		}
+		cout << '\n';
 	}
 	cout << "." << endl;
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
