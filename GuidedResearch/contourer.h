@@ -128,6 +128,9 @@ vector<vector<Point>> getContour(GLfloat (&feedback)[rows][cols], const GLint& f
 template <size_t rows, size_t cols>
 void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& contourLine, GLfloat(&feedback)[rows][cols], const int& i, const int& j, const Line& dummyLine, const GLint& fieldWidth)
 {
+	if (contourLine.size() == 138) {
+		int debug = 1;
+	}
 	// Clear the data for the current square
 	feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j] = dummyLine.begin.x;
 	feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j + 1] = dummyLine.begin.y;

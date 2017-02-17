@@ -6,19 +6,6 @@
 
 #include "contourer.h"
 
-// Helper measurement macros. To be used together. Place before and after the code which you want to measure execution time for. 
-// iterations - the number of times to execute code;
-// result - total and mean time output in cout.
-#define measure_start(iterations) double timeDelta = glfwGetTime(); \
-	const int n = iterations; \
-	for (int i = 0; i < n; i++) {
-
-#define measure_end } \
-	timeDelta = (glfwGetTime() - timeDelta); \
-	std::cout << "Total time for n = " << n << " executions: " << timeDelta << '\n'; \
-	timeDelta /= n; \
-	std::cout << "Mean time per execution: " << timeDelta << '\n';
-
 /*
 scalarField:[[minX, maxX], [minY, maxY]]
 fieldCoords:[[0, width - 2], [0, height - 2]]
@@ -130,7 +117,7 @@ int main() {
 	glActiveTexture(GL_TEXTURE1);
 	GLuint contourTex;
 	const GLfloat dummyValue = 666.f;
-	GLfloat dummyArray[2]{ dummyValue, dummyValue };
+	GLfloat dummyArray[2]{dummyValue, dummyValue};
 	glGenTextures(1, &contourTex);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
 	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RG32F, fieldWidth, fieldHeight, 4);
@@ -147,8 +134,9 @@ int main() {
 	glUniform1i(glGetUniformLocation(computeProgram, "scalarField"), 0);
 	glUniform1i(glGetUniformLocation(computeProgram, "contour"), 1);
 
-	//	glClearColor(0.1f, 0.2, 0.1f, 1.f);
-	//	glClear(GL_COLOR_BUFFER_BIT);
+//	glClearColor(0.1f, 0.2, 0.1f, 1.f);
+//	glClear(GL_COLOR_BUFFER_BIT);
+
 	// COMPUTER SHADER
 	glDispatchCompute(fieldWidth - 1, fieldHeight - 1, 1);
 	// Ensure that writes by the compute shader have completed
@@ -159,12 +147,12 @@ int main() {
 
 	// Read back the 2D array texture
 	GLfloat contourTexData[fieldWidth * 4][fieldHeight * 2];
-	//cout << "sizeof(contourTexData): " << sizeof(contourTexData) << endl;
-	//printImageContents(contourTex, contourTexData, dummyValue);
+	cout << "sizeof(contourTexData): " << sizeof(contourTexData) << endl;
+	printImageContents(contourTex, contourTexData, dummyValue);
 
 	// Sort the primitives and retrieve the contour
 	vector<vector<Point>> contour = getContour(contourTexData, fieldWidth, fieldHeight, dummyValue);
-	//cout << "contour size: " << contour.size() << endl;
+	cout << "contour size: " << contour.size() << endl;
 
 
 	// Draw the contour
