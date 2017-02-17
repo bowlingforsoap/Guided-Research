@@ -6,6 +6,19 @@
 
 #include "contourer.h"
 
+// Helper measurement macros. To be used together. Place before and after the code which you want to measure execution time for. 
+// iterations - the number of times to execute code;
+// result - total and mean time output in cout.
+#define measure_start(iterations) double timeDelta = glfwGetTime(); \
+	const int n = iterations; \
+	for (int i = 0; i < n; i++) {
+
+#define measure_end } \
+	timeDelta = (glfwGetTime() - timeDelta); \
+	std::cout << "Total time for n = " << n << " executions: " << timeDelta << '\n'; \
+	timeDelta /= n; \
+	std::cout << "Mean time per execution: " << timeDelta << '\n';
+
 /*
 scalarField:[[minX, maxX], [minY, maxY]]
 fieldCoords:[[0, width - 2], [0, height - 2]]
@@ -26,13 +39,13 @@ int main() {
 	glViewport(0, 0, width, height);
 
 	// Setup shaders
-	Shader shader("shaders/marchingsquares/vert.glsl", "shaders/marchingsquares/frag.glsl", "shaders/marchingsquares/geometry.glsl");
+	Shader shader("shaders/marchingsquares/marchingsquares.vert", "", "shaders/marchingsquares/marchingsquares.geom");
 	// Check some OpenGL capabilities
 	GLint value;
 	glGetIntegerv(GL_MAX_GEOMETRY_IMAGE_UNIFORMS, &value);
-	cout << "GL_MAX_GEOMETRY_IMAGE_UNIFORMS: " << value << endl;
+	std::cout << "GL_MAX_GEOMETRY_IMAGE_UNIFORMS: " << value << endl;
 	glGetIntegerv(GL_MAX_COMPUTE_SHARED_MEMORY_SIZE, &value);
-	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
+	std::cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
 
 	// Scalar Field setup
 	GLint fieldWidth = 100, fieldHeight = 100;
@@ -61,7 +74,7 @@ int main() {
 		cout << fieldCoords[i] << ", ";
 	}*/
 
-	
+
 
 	// Store scalar field into a texture
 	GLuint scalarFieldTex;
@@ -99,8 +112,8 @@ int main() {
 	glTransformFeedbackVaryings(shader.Program, 1, feedbackVaryings, GL_INTERLEAVED_ATTRIBS);
 	// Relink program for changes to be commited
 	glLinkProgram(shader.Program);
-	cout << "Error check: " << glGetError() << endl;
-	
+	std::cout << "Error check: " << glGetError() << endl;
+
 	// Set uniforms
 	shader.Use();
 	glUniform1i(glGetUniformLocation(shader.Program, "scalarField"), 0); // image unit 0
@@ -118,6 +131,9 @@ int main() {
 	glClearColor(0.1f, 0.2, 0.1f, 1.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
+	/*double timeDelta = glfwGetTime();
+	const int n = 100;
+	for (int i = 0; i < n; i++) {*/
 	// Query OpenGL about how many primitives were transform feedbacked
 	glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, query);
 	glBeginTransformFeedback(GL_LINES);
@@ -133,11 +149,11 @@ int main() {
 	// Get query result: number of primitives written
 	GLint numPrimitives;
 	glGetQueryObjectiv(query, GL_QUERY_RESULT, &numPrimitives);
-	cout << "Number of primitives written: " << numPrimitives << endl;
+	//cout << "Number of primitives written: " << numPrimitives << endl;
 
 	// Read data from the GL_TRANSFORM_FEEDBACK_BUFFER
-	cout << "GL_TRANSFORM_FEEDBACK_BUFFER main: ";
-	printBufferContents(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(GLfloat) * 0, sizeof(GLfloat) * 24);
+	//cout << "GL_TRANSFORM_FEEDBACK_BUFFER main: ";
+	//printBufferContents(GL_TRANSFORM_FEEDBACK_BUFFER, sizeof(GLfloat) * 0, sizeof(GLfloat) * 24);
 
 	// Test what we got from TF
 	//testTransformFeedback(numPrimitives, *window, TFBO);
@@ -149,7 +165,7 @@ int main() {
 
 	// Draw the contour
 	renderContour(*window, contour);
-		
+
 	system("pause");
 	// Once a transform feedback object is no longer needed, it should be deleted.
 	// TFBO is not a TF buffer, but a GL_ARRAY_BUFFER!
@@ -193,7 +209,7 @@ void generateScalarField(GLfloat* &scalarField, GLint width, GLint height, GLflo
 void testTransformFeedback(int numPrimitives, GLFWwindow& window, GLuint& prevTFBO) {
 	//===========================================================
 	// Simple test for Transform Feedback data
-	Shader testShader("shaders/feedbacktest/simpleVert.glsl", "shaders/feedbacktest/simpleFrag.glsl", "");
+	Shader testShader("shaders/feedbacktest/feedbacktest.vert", "shaders/feedbacktest/feedbacktest.frag", "");
 
 	// Fill VBO from TFBO
 	GLint numBytesInFeedback = numPrimitives * 2 * 2 * sizeof(GLfloat); // numPrimitives * verticesPerPrimitive * coordsPerVertex * sizeof(GLfloat)
