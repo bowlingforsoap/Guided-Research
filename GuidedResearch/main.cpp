@@ -63,7 +63,7 @@ int main() {
 
 	// Setup compute shader
 	GLuint computeShader = glCreateShader(GL_COMPUTE_SHADER);
-	string computeSrcString = Shader::getShaderCode("shaders/marchingsquares/compute.glsl");
+	string computeSrcString = Shader::getShaderCode("shaders/marchingsquares/marchingsquares.comp");
 	const GLchar* computeSrc = computeSrcString.c_str();
 	glShaderSource(computeShader, 1, &computeSrc, NULL);
 	glCompileShader(computeShader);

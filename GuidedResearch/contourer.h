@@ -287,7 +287,7 @@ inline bool connectedLines(Line& currLine, Line& compareLine, const Line& dummyL
 
 void renderContour(GLFWwindow& window, vector<vector<Point>>& contour)
 {
-	Shader shader("shaders/reconstructedcontour/vert.glsl", "shaders/reconstructedcontour/frag.glsl", "");
+	Shader shader("shaders/reconstructedcontour/reconstructedcontour.vert", "shaders/reconstructedcontour/reconstructedcontour.frag", "");
 
 	GLuint VBO, VAO;
 	glGenBuffers(1, &VBO);
