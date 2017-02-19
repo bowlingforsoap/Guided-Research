@@ -4,68 +4,9 @@
 #include <GLFW\glfw3.h>
 #include <vector>
 
+#include "line.h"
+
 using namespace std;
-
-// Used to deal with floating point precision issues.
-GLfloat epsilon = .000001f;
-
-// An abstraction over two GLfloat-s with useful utility operators.
-struct Point
-{
-	GLfloat x;
-	GLfloat y;
-
-	inline bool operator==(const Point& rhs)
-	{
-		if (x == rhs.x && y == rhs.y)
-		{
-			return true;
-		}
-		if (Point{abs(x - rhs.x), abs(y - rhs.y)} < Point{epsilon, epsilon})
-		{
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-
-	inline bool operator!=(const Point& rhs) {
-		return !operator==(rhs);
-	}
-
-	inline Point operator-(const Point& rhs)
-	{
-		return {x - rhs.x, y - rhs.y};
-	}
-
-	inline bool operator<(const Point& rhs)
-	{
-		if (x < rhs.x && y < rhs.y)
-		{
-			return true;
-		}
-
-		return false;
-	}
-};
-
-struct Line
-{
-	Point begin;
-	Point end;
-
-	inline bool operator==(const Line& rhs)
-	{
-		return (begin == rhs.begin) && (end == rhs.end);
-	}
-
-	inline bool operator!=(const Line& rhs)
-	{
-		return !operator==(rhs);
-	}
-};
 
 // Traces contour for the given
 template <size_t rows, size_t cols>
