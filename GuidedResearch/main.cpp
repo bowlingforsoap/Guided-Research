@@ -169,7 +169,8 @@ int main() {
 	vector<vector<Point>> contour = getContour(contourTexData, fieldWidth, fieldHeight, dummyValue);
 	cout << "contour size: " << contour.size() << endl;
 
-	vector<vector<float>> angles = Labeler::computeAngles(contour);
+	vector<vector<GLfloat>> angles = Labeler::computeCurvatureAngles(contour);
+	vector<Point> candidatePosition = Labeler::findCandidatePositions(.1f, contour[0], angles[0]);
 
 	// Draw the contour
 	//renderContour(*window, contour);
