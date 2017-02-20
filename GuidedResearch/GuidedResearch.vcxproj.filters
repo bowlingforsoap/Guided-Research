@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\util">
+      <UniqueIdentifier>{a326096f-61c0-4e52-b362-4276b9c6423c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -22,6 +25,15 @@
   <ItemGroup>
     <ClInclude Include="contourer.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="labeler.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="line.h">
+      <Filter>Source Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="point.h">
+      <Filter>Source Files\util</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

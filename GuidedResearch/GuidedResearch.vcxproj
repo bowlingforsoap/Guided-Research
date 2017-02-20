@@ -125,6 +125,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="contourer.h" />
+    <ClInclude Include="labeler.h" />
+    <ClInclude Include="line.h" />
+    <ClInclude Include="point.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

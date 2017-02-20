@@ -5,6 +5,7 @@
 #include <iomanip>      // std::setprecision
 
 #include "contourer.h"
+#include "labeler.h"
 
 // Helper measurement macros. To be used together. Place before and after the code which you want to measure execution time for. 
 // iterations - the number of times to execute code;
@@ -87,8 +88,8 @@ int main() {
 	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
 
 	// Scalar Field setup
-	const GLint fieldWidth = 100;
-	const GLint fieldHeight = 100;
+	const GLint fieldWidth = 5;
+	const GLint fieldHeight = 5;
 	GLfloat* scalarField = nullptr;
 	GLint* fieldCoords = nullptr;
 	GLint fieldCoordsSize;
@@ -168,6 +169,7 @@ int main() {
 	vector<vector<Point>> contour = getContour(contourTexData, fieldWidth, fieldHeight, dummyValue);
 	cout << "contour size: " << contour.size() << endl;
 
+	vector<vector<float>> angles = Labeler::computeAngles(contour);
 
 	// Draw the contour
 	//renderContour(*window, contour);

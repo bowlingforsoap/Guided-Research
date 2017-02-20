@@ -4,7 +4,10 @@
 #include <math.h>
 
 // Used to deal with floating point precision issues.
-GLfloat epsilon = .000001f;
+const GLfloat epsilon = .000001f;
+
+// Utility value
+const GLfloat dummyValue = 666.f;
 
 // An abstraction over two GLfloat-s with useful utility operators.
 struct Point
