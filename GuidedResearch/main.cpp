@@ -6,6 +6,7 @@
 
 #include "contourer.h"
 #include "labeler.h"
+#include "renderer.h"
 
 // Helper measurement macros. To be used together. Place before and after the code which you want to measure execution time for. 
 // iterations - the number of times to execute code;
@@ -173,7 +174,7 @@ int main() {
 	vector<Point> candidatePosition = Labeler::findCandidatePositions(.1f, contour[0], angles[0]);
 
 	// Draw the contour
-	//renderContour(*window, contour);
+	renderContour(*window, contour);
 
 	system("pause");
 	glfwTerminate();
