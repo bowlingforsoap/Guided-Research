@@ -171,17 +171,17 @@ int main() {
 	cout << "contour size: " << contour.size() << endl;
 
 	vector<vector<GLfloat>> angles = Labeler::computeCurvatureAngles(contour);
-	//vector<vector<Point>> candidatePositions;
-	//candidatePositions.reserve(contour.size());
-	//for (int i = 0; i < contour.size(); i++) {
-	//	candidatePositions.push_back(Labeler::findCandidatePositions(.3f, contour[i], angles[i]).position);
-	//}
+	vector<vector<Point>> candidatePositions;
+	candidatePositions.reserve(contour.size());
+	for (int i = 0; i < contour.size(); i++) {
+		candidatePositions.push_back(Labeler::findCandidatePositions(.3f, contour[i], angles[i]).position);
+	}
 
 	// Draw the contour
 	srand(glfwGetTime());
 	renderContour(*window, contour);
 	// May crash because of the case described in findCandidatePositions TODO
-	//renderContour(*window, candidatePositions);
+	renderContour(*window, candidatePositions);
 	glfwSwapBuffers(window);
 
 	system("pause");

@@ -13,56 +13,25 @@ using namespace std;
 
 class Labeler {
 public:
+	struct CandidatePosition {
+		GLfloat curvature;
+		GLfloat length;
+		vector<Point> position;
+	};
+
 	// Searches for a point sequence, which comprises a broken line with minimal curvature and is at least labelLength long.
-	static vector<Point> findCandidatePositions(GLfloat labelLength, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
-		CandidatePosition candidatePosition;
-		candidatePosition.curvature = numeric_limits<float>::max();
-		candidatePosition.length = 0.f;
-		
-		for (int i = 0; i < contourLine.size(); i++) {
-			CandidatePosition currentCandidate;
-			currentCandidate.curvature = 0.f;
-			currentCandidate.length = 0.f;
-			currentCandidate.position.clear();
-
-			currentCandidate.position.push_back(contourLine[i]);
-			int j = (i == contourLine.size() - 1) ? 0 : i + 1;
-			Point previousPoint = contourLine[i];//contourLine[ (j != 0) ? j - 1 : contourLine.size() - 1 ];
-			while (j != i) {
-				bool boundaryPoint = false;
-
-				Point currPoint = contourLine[j];
-				currentCandidate.length += magnitude(previousPoint, currPoint);
-				currentCandidate.position.push_back(currPoint);
-				if (angles[j] != dummyValue) {
-					currentCandidate.curvature += angles[j];
-				}
-				else {
-					boundaryPoint = true;
-				}
-
-				if (currentCandidate.length >= labelLength) {
-					if (currentCandidate.curvature < candidatePosition.curvature) {
-						candidatePosition = currentCandidate;
-					}
-					break;
-				}
-				
-				if (boundaryPoint) {
-					break;
-				}
-
-				previousPoint = currPoint;
-				if (++j = contourLine.size()) {
-					j = 0;
-				}
-			}
+	static CandidatePosition findCandidatePositions(GLfloat labelLength, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
+		// TODO: handle case, where label is longer than given contourLine. Maybe just store the contourLine's length somewhere, and if label is longer, just render it in the middle
+		if (angles[angles.size() - 1] == dummyValue) {
+			return findCandidatePositionsForOpenedContour(labelLength, contourLine, angles);
 		}
-
-		return candidatePosition.position;
+		else {
+			return findCandidatePositionsForClosedContour(labelLength, contourLine, angles);
+		}
 	}
 
-	// Computes a delta angle (curvature angle) for each point, which is constructed by 2 vectors: (current point - previous point), (next point - current point).
+	// Computes a delta angle (curvature angle) for each point, which is constructed by 2 vectors: (current point - previous point), (next point - current point). 
+	// If given point is at boundary (one of the coordinates is -1 or 1), then dummyValue from point.h is stored for this point.
 	static vector<vector<GLfloat>> computeCurvatureAngles(const vector<vector<Point>>& contour) {
 		vector<vector<GLfloat>> angles;
 		angles.reserve(contour.size());
@@ -107,17 +76,112 @@ public:
 	}
 
 private:
+	// Returns the next looped index for i:[0, n - 1]. If i == (n - 1), returns 0.
+	static inline int nextLoopedIndex(const int& i, const int& n) {
+		return (i == n - 1) ? 0 : i + 1;
+	}
+
+	// Returns the previous looped index for i:[0, n - 1]. If i == 0, returns (n - 1).
+	static inline int prevLoopedIndex(const int& i, const int& n) {
+		return (i == 0) ? n - 1 : i - 1;
+	}
+
+	static CandidatePosition findCandidatePositionsForOpenedContour(GLfloat labelLength, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
+		CandidatePosition candidatePosition;
+		candidatePosition.curvature = numeric_limits<float>::max();
+		candidatePosition.length = 0.f;
+
+		int n = contourLine.size();
+		for (int i = 0; i < n - 1; i++) {
+			CandidatePosition currentCandidate;
+			currentCandidate.position.clear();
+
+			int nextI = nextLoopedIndex(i, n);
+			Point p1 = contourLine[i];
+			Point p2 = contourLine[nextI];
+			currentCandidate.position.push_back(p1);
+			currentCandidate.position.push_back(p2);
+			currentCandidate.length = magnitude(p1, p2);
+
+			Point currPoint;
+			Point previousPoint = p2;
+			bool boundaryPoint;
+			for (int j = nextLoopedIndex(nextI, n); j < n; j++) {
+				 boundaryPoint = false;
+
+				currPoint = contourLine[j];
+				currentCandidate.length += magnitude(previousPoint, currPoint);
+				currentCandidate.position.push_back(currPoint);
+				// Check if we are at the NDC boundary and deal with angle accordingly
+				if (angles[prevLoopedIndex(j, n)] == dummyValue) {
+					boundaryPoint = true;
+				} else {
+					currentCandidate.curvature += angles[prevLoopedIndex(j, n)];
+				}
+
+				if (currentCandidate.length >= labelLength) {
+					if (currentCandidate.curvature < candidatePosition.curvature) {
+						candidatePosition = currentCandidate;
+					}
+					break;
+				} else if (boundaryPoint) {
+					break;
+				}
+
+				previousPoint = currPoint;
+			}
+
+		}
+
+		return candidatePosition;
+	}
+
+	static CandidatePosition findCandidatePositionsForClosedContour(GLfloat labelLength, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
+		CandidatePosition candidatePosition;
+		candidatePosition.curvature = numeric_limits<float>::max();
+		candidatePosition.length = 0.f;
+		int n = contourLine.size();
+
+		for (int i = 0; i < n; i++) {
+			CandidatePosition currentCandidate;
+			currentCandidate.position.clear();
+
+			int nextI = nextLoopedIndex(i, n);
+			Point p1 = contourLine[i];
+			Point p2 = contourLine[nextI];
+			currentCandidate.position.push_back(p1);
+			currentCandidate.position.push_back(p2);
+			currentCandidate.length = magnitude(p1, p2);
+
+			Point currPoint;
+			Point previousPoint = p2;
+			int j = nextLoopedIndex(nextI, n);
+			while (j != i) {
+				currPoint = contourLine[j];
+				currentCandidate.length += magnitude(previousPoint, currPoint);
+				currentCandidate.position.push_back(currPoint);
+				currentCandidate.curvature += angles[prevLoopedIndex(j, n)];
+
+				if (currentCandidate.length >= labelLength) {
+					if (currentCandidate.curvature < candidatePosition.curvature) {
+						candidatePosition = currentCandidate;
+					}
+					break;
+				}
+
+				previousPoint = currPoint;
+				j = nextLoopedIndex(j, n);
+			}
+		}
+
+		return candidatePosition;
+	}
+
 	// Computes the magnitude of a vector given by 2 Point-s.
 	static inline GLfloat magnitude(const Point& p1, const Point& p2) {
 		Point vec{ p1.x - p2.x, p1.y - p2.y };
 		return sqrt(vec.x * vec.x + vec.y * vec.y);
 	}
-
-	struct CandidatePosition{
-		GLfloat curvature;
-		GLfloat length;
-		vector<Point> position;
-	};
 
 	// Computes an angle between two lines in anti-clockwise direction, returns it's absolute value.
 	// Consider AB a vector that gives the direction of a 0 curvature (0 delta angle). Now delta angle would be how much BC bends from this perfect 0 curvature, without taking bending direction into account.
