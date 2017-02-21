@@ -89,12 +89,12 @@ int main() {
 	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
 
 	// Scalar Field setup
-	const GLint fieldWidth = 5;
-	const GLint fieldHeight = 5;
+	const GLint fieldWidth = 100;
+	const GLint fieldHeight = 100;
 	GLfloat* scalarField = nullptr;
 	GLint* fieldCoords = nullptr;
 	GLint fieldCoordsSize;
-	generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -3, 3, 3, fieldCoords, fieldCoordsSize);
+	generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -5, 3, 5, fieldCoords, fieldCoordsSize);
 
 	// Check scalar field coords
 	/*cout << "\nScalar field:" << endl;
@@ -171,10 +171,18 @@ int main() {
 	cout << "contour size: " << contour.size() << endl;
 
 	vector<vector<GLfloat>> angles = Labeler::computeCurvatureAngles(contour);
-	vector<Point> candidatePosition = Labeler::findCandidatePositions(.1f, contour[0], angles[0]);
+	//vector<vector<Point>> candidatePositions;
+	//candidatePositions.reserve(contour.size());
+	//for (int i = 0; i < contour.size(); i++) {
+	//	candidatePositions.push_back(Labeler::findCandidatePositions(.3f, contour[i], angles[i]).position);
+	//}
 
 	// Draw the contour
+	srand(glfwGetTime());
 	renderContour(*window, contour);
+	// May crash because of the case described in findCandidatePositions TODO
+	//renderContour(*window, candidatePositions);
+	glfwSwapBuffers(window);
 
 	system("pause");
 	glfwTerminate();

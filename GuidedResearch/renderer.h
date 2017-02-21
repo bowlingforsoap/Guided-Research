@@ -33,10 +33,10 @@ void renderContour(GLFWwindow& window, vector<vector<Point>>& contour)
 		shader.Use();
 		GLfloat colors[3]{rand() / (GLfloat) RAND_MAX, rand() / (GLfloat)RAND_MAX, rand() / (GLfloat)RAND_MAX };
 		glUniform3f(glGetUniformLocation(shader.Program, "u_Color"), colors[0], colors[1], colors[2]);
-		glDrawArrays(GL_LINE_STRIP, 0, contour[i].size());
+		glDrawArrays(GL_LINE_LOOP, 0, contour[i].size());
 		glBindVertexArray(0);
 	}
-	glfwSwapBuffers(&window);
+	//glfwSwapBuffers(&window);
 	// Clean-up
 	glDeleteBuffers(1, &VBO);
 	glDeleteVertexArrays(1, &VAO);

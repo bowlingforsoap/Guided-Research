@@ -61,6 +61,14 @@ vector<vector<Point>> getContour(GLfloat (&feedback)[rows][cols], const GLint& f
 		}
 	}
 
+	// The one before last point in closed contour lines dublicates the first one, which is to be expected, as a line closes on itself. However, we don't need to store it. Additionally, due to recursive nature of the algorithm and the way lines around the current one are stored, linesAround for the very first point do not reflect the changes made to feedback array, from which they were initially taken. Therefore, the other end of the line (which would be followed, had the algorithm chose the opposite way to trace this paticular contour) is stored twice: as the second element before last and as the last one. 
+	// Conclusion: we have to delete the last two points, as they are redundant and harmful to further labeling.
+	for (vector<Point>& contourLine : contour) {
+		if (contourLine[contourLine.size() - 1] == contourLine[contourLine.size() - 3]) {
+			contourLine.pop_back();
+			contourLine.pop_back();
+		}
+	}
 	return contour;
 }
 
@@ -69,6 +77,7 @@ vector<vector<Point>> getContour(GLfloat (&feedback)[rows][cols], const GLint& f
 template <size_t rows, size_t cols>
 void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& contourLine, GLfloat(&feedback)[rows][cols], const int& i, const int& j, const Line& dummyLine, const GLint& fieldWidth)
 {
+	// TODO: important! only delete the processed line, not the whole square!! otherwise an unprocessed line might get deleted.
 	// Clear the data for the current square
 	feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j] = dummyLine.begin.x;
 	feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j + 1] = dummyLine.begin.y;
@@ -152,7 +161,6 @@ void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& 
 		}
 
 //		assert(compareLineSegment.begin.x != dummyLine.begin.x && compareLineSegment.end.x != dummyLine.begin.x && compareLineSegment.begin.y != dummyLine.begin.x && compareLineSegment.end.y != dummyLine.begin.x);
-
 		connectedLinesFlag = connectedLines(currLine, compareLineSegment, dummyLine, contourLine);
 		if (connectedLinesFlag)
 		{
@@ -177,21 +185,13 @@ void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& 
 			// By not breaking the loop, we force algorithm to trace contour in a direction opposite to the one chosen before
 		}
 	}
-
-
-	// If line segment was processed, but doesn't connect to anything -> it's the last segment
-	// Clear the data for the current square
-/*	feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j] = dummyLine.begin.x;
-	feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j + 1] = dummyLine.begin.y;
-	feedback[i + (lineSegmentNumberInSquare * 2 + 1) * fieldWidth][j] = dummyLine.end.x;
-	feedback[i + (lineSegmentNumberInSquare * 2 + 1) * fieldWidth][j + 1] = dummyLine.end.y;*/
 }
 
 // Definition.
 inline bool connectedLines(Line& currLine, Line& compareLine, const Line& dummyLine, vector<Point>& contourLine)
 {
 	if (currLine.end == compareLine.begin && currLine.begin == compareLine.end) {
-		return false;
+		cout << "break\n";
 	}
 
 	if (currLine.end == compareLine.begin)
