@@ -2,6 +2,7 @@
 
 #include <GLFW\glfw3.h>
 #include <vector>
+#include <cstdlib>
 
 #include <util/Shader.h>
 
@@ -16,15 +17,6 @@ void renderContour(GLFWwindow& window, vector<vector<Point>>& contour)
 	GLuint VBO, VAO;
 	glGenBuffers(1, &VBO);
 	glGenVertexArrays(1, &VAO);
-
-	// TODO: unhardcode or remove
-
-	const int colorsSize = 2;
-	GLfloat colors[colorsSize][3]{
-		.6f, .1f, .23f,
-		.1f, .6f, .23f
-	};
-
 	for (int i = 0; i < contour.size(); i++)
 	{
 		cout << "contour[" << i << "].size(): " << contour[i].size() << endl;
@@ -39,7 +31,8 @@ void renderContour(GLFWwindow& window, vector<vector<Point>>& contour)
 		glLineWidth(5.f);
 
 		shader.Use();
-		//glUniform3fv(glGetUniformLocation(shader.Program, "u_Color"), 3, colors[ 0]);
+		GLfloat colors[3]{rand() / (GLfloat) RAND_MAX, rand() / (GLfloat)RAND_MAX, rand() / (GLfloat)RAND_MAX };
+		glUniform3f(glGetUniformLocation(shader.Program, "u_Color"), colors[0], colors[1], colors[2]);
 		glDrawArrays(GL_LINE_STRIP, 0, contour[i].size());
 		glBindVertexArray(0);
 	}
