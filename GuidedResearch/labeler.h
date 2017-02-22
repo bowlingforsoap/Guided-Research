@@ -21,7 +21,7 @@ public:
 
 	// Searches for a point sequence, which comprises a broken line with minimal curvature and is at least labelLength long.
 	static CandidatePosition findCandidatePositions(GLfloat labelLength, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
-		// TODO: handle case, where label is longer than given contourLine. Maybe just store the contourLine's length somewhere, and if label is longer, just render it in the middle
+		// TODO: for the 2 methods below, store length / angle, as opposed to just an agnle. Also an angle computation may need some changing (possibly: 180 - current angle)
 		if (angles[angles.size() - 1] == dummyValue || angles[0] == dummyValue) {
 			return findCandidatePositionsForOpenedContour(labelLength, contourLine, angles);
 		}
