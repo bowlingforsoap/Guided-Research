@@ -21,8 +21,7 @@ public:
 
 	// Searches for a point sequence, which comprises a broken line with minimal curvature and is at least labelLength long.
 	static CandidatePosition findCandidatePositions(GLfloat labelLength, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
-		// TODO: handle case, where label is longer than given contourLine. Maybe just store the contourLine's length somewhere, and if label is longer, just render it in the middle
-		if (angles[angles.size() - 1] == dummyValue || angles[0] == dummyValue) {
+		if (angles[angles.size() - 1] == dummyValue) {
 			return findCandidatePositionsForOpenedContour(labelLength, contourLine, angles);
 		}
 		else {
@@ -30,7 +29,7 @@ public:
 		}
 	}
 
-	// Computes a delta angle (curvature angle) for each point, which is constructed by 2 vectors: (current point - previous point), (next point - current point). 
+	// Computes a delta angle (curvature angle) for each point, which is constructed by 2 vectors: (next point - current point), (1,0). 
 	// If given point is at boundary (one of the coordinates is -1 or 1), then dummyValue from point.h is stored for this point.
 	static vector<vector<GLfloat>> computeCurvatureAngles(const vector<vector<Point>>& contour) {
 		vector<vector<GLfloat>> angles;
@@ -39,36 +38,25 @@ public:
 		for (const vector<Point>& contourLine : contour) {
 			vector<GLfloat> contourLineAngles;
 			contourLineAngles.reserve(contourLine.size());
-			Point pointA, pointB, pointC;
+			Point pointA, pointB;
 
-			for (int i = 1; i < contourLine.size() - 1; i++) {
-				pointA = contourLine[i - 1];
-				pointB = contourLine[i];
-				pointC = contourLine[i + 1];
+			for (int i = 0; i < contourLine.size() - 1; i++) {
+				pointA = contourLine[i];
+				pointB = contourLine[i + 1];
 
-				contourLineAngles.push_back(deltaAngleBetweenLines(pointA, pointB, pointC));
+				contourLineAngles.push_back(deltaAngle(pointA, pointB));
 			}
 
-			// Store the angle for the last.. 
-			if (abs(abs(pointC.x) - 1.f) < epsilon || abs(abs(pointC.y) - 1.f) < epsilon) {
+			// Store the angle for the (first - last) line
+			if (abs(abs(pointB.x) - 1.f) < epsilon || abs(abs(pointB.y) - 1.f) < epsilon) {
 				// Store dummyValue if we are at the edge
 				contourLineAngles.push_back(dummyValue);
 			}
 			else {
 				pointA = contourLine[0];
-				contourLineAngles.push_back(deltaAngleBetweenLines(pointB, pointC, pointA));
+				contourLineAngles.push_back(deltaAngle(pointB, pointA));
 			}
-			// ..and the first point
-			pointB = contourLine[0];
-			if (abs(abs(pointB.x) - 1.f) < epsilon || abs(abs(pointB.y) - 1.f) < epsilon) {
-				contourLineAngles.insert(contourLineAngles.begin(), dummyValue);
-			}
-			else {
-				pointA = contourLine[contourLine.size() - 1];
-				pointC = contourLine[1];
-				contourLineAngles.insert(contourLineAngles.begin(), deltaAngleBetweenLines(pointA, pointB, pointC));
-			}
-
+			
 			angles.push_back(contourLineAngles);
 		}
 
@@ -110,6 +98,7 @@ private:
 			currentCandidate.position.push_back(p2);
 			currentCandidate.length = magnitude(p1, p2);
 			currentCandidate.curvature = 0;
+			currentCandidate.curvature += magnitude(p1, p2) / angles[i];
 
 			Point currPoint;
 			Point previousPoint = p2;
@@ -124,7 +113,7 @@ private:
 				if (angles[j - 1] == dummyValue) {
 					boundaryPoint = true;
 				} else {
-					currentCandidate.curvature += angles[j - 1];
+					currentCandidate.curvature += magnitude(previousPoint, currPoint) / angles[j - 1];
 				}
 
 				if (currentCandidate.length >= labelLength) {
@@ -156,7 +145,6 @@ private:
 		candidatePosition.curvature = numeric_limits<float>::max();
 		candidatePosition.length = 0.f;
 		int n = contourLine.size();
-
 		for (int i = 0; i < n; i++) {
 			CandidatePosition currentCandidate;
 			currentCandidate.position.clear();
@@ -168,6 +156,7 @@ private:
 			currentCandidate.position.push_back(p2);
 			currentCandidate.length = magnitude(p1, p2);
 			currentCandidate.curvature = 0;
+			currentCandidate.curvature += magnitude(p1, p2) / angles[i];
 
 			Point currPoint;
 			Point previousPoint = p2;
@@ -176,7 +165,7 @@ private:
 				currPoint = contourLine[j];
 				currentCandidate.length += magnitude(previousPoint, currPoint);
 				currentCandidate.position.push_back(currPoint);
-				currentCandidate.curvature += angles[prevLoopedIndex(j, n)];
+				currentCandidate.curvature += magnitude(previousPoint, currPoint) / angles[prevLoopedIndex(j, n)];
 
 				if (currentCandidate.length >= labelLength) {
 					if (currentCandidate.curvature < candidatePosition.curvature) {
@@ -200,14 +189,9 @@ private:
 		candidatePosition.position = contourLine;
 		candidatePosition.length = 0.f;
 		candidatePosition.curvature = 0.f;
-
-		// Handle first
-		if (angles[0] != dummyValue) {
-			candidatePosition.curvature += angles[0];
-		}
-		candidatePosition.length += magnitude(contourLine[0], contourLine[1]);
+		
 		// Handle everything in the middle
-		for (int i = 1; i < contourLine.size() - 1; i++) {
+		for (int i = 0; i < contourLine.size() - 1; i++) {
 			candidatePosition.length += magnitude(contourLine[i], contourLine[i + 1]);
 			candidatePosition.curvature += angles[i];
 		}
@@ -225,20 +209,15 @@ private:
 		return sqrt(vec.x * vec.x + vec.y * vec.y);
 	}
 
-	// Computes an angle between two lines in anti-clockwise direction, returns it's absolute value.
-	// Consider AB a vector that gives the direction of a 0 curvature (0 delta angle). Now delta angle would be how much BC bends from this perfect 0 curvature, without taking bending direction into account.
-	static inline float deltaAngleBetweenLines(Point& pointA, Point& pointB, Point& pointC) {
+	// Computes how small an angle between a vector given by (pointB - pointA) and (+x or -x) is, without taking a sign into account (i.e. 182 and 178, as well ass 358 and 2 degrees will yeild a value of 2).
+	static inline float deltaAngle(Point& pointA, Point& pointB) {
 		float angle;
 
 		Point vecAB = pointB - pointA;
-		Point vecBC = pointC - pointB;
 
 		// Get counter clockwise angle from vecBC to vecAB (or CBA - 180)
-		angle = (atan2(vecAB.y, vecAB.x) - atan2(vecBC.y, vecBC.x)) * 180.f / M_PI;
-		/*if (angle < 0) {
-			angle += 180.f;
-		}*/
-
-		return abs(angle);
+		angle = abs(atan2(vecAB.y, vecAB.x)) * 180.f / M_PI; // [0; 180]
+		angle = abs(90.f - angle); // [0; pi/2]
+		return angle;
 	}
 };

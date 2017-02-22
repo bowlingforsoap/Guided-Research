@@ -16,6 +16,9 @@
     <Filter Include="Source Files\util">
       <UniqueIdentifier>{a326096f-61c0-4e52-b362-4276b9c6423c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\labeler">
+      <UniqueIdentifier>{e364ab68-4ee0-4a9c-8b58-3ba052fc4a46}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -24,9 +27,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="contourer.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="labeler.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="line.h">
@@ -40,6 +40,9 @@
     </ClInclude>
     <ClInclude Include="meausrement.h">
       <Filter>Source Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="labeler.h">
+      <Filter>Source Files\labeler</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -77,8 +77,8 @@ int main() {
 
 	// Scalar Field setup
 	// TODO: Issues when fieldWidth != fieldHeight. Maybe the same ol' problem, but contouring must have something to do with it too.
-	const GLint fieldWidth = 50;
-	const GLint fieldHeight = 50;
+	const GLint fieldWidth = 100;
+	const GLint fieldHeight = 100;
 	GLfloat* scalarField = nullptr;
 	GLint* fieldCoords = nullptr;
 	GLint fieldCoordsSize;
@@ -162,13 +162,12 @@ int main() {
 	vector<vector<Point>> candidatePositions;
 	candidatePositions.reserve(contour.size());
 	for (int i = 0; i < contour.size(); i++) {
-		candidatePositions.push_back(Labeler::findCandidatePositions(.9f, contour[i], angles[i]).position);
+		candidatePositions.push_back(Labeler::findCandidatePositions(.4f, contour[i], angles[i]).position);
 	}
 
 	// Draw the contour
 	srand(glfwGetTime());
 	renderContour(false, contour, GL_LINE_STRIP);
-	// May crash because of the case described in findCandidatePositions TODO
 	renderContour(true, candidatePositions, GL_LINE_STRIP);
 	glfwSwapBuffers(window);
 

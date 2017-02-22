@@ -17,7 +17,7 @@ void renderContour(const bool& randColorsPerContourLine, vector<vector<Point>>& 
 	GLuint VBO, VAO;
 	glGenBuffers(1, &VBO);
 	glGenVertexArrays(1, &VAO);
-	GLfloat colors[3]{ rand() / (GLfloat)RAND_MAX, rand() / (GLfloat)RAND_MAX, rand() / (GLfloat)RAND_MAX };
+	GLfloat colors[3]{ 1.f, 1.f, 1.f };
 	for (int i = 0; i < contour.size(); i++)
 	{
 		cout << "contour[" << i << "].size(): " << contour[i].size() << endl;

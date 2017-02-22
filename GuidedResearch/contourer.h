@@ -55,7 +55,7 @@ vector<vector<Point>> getContour(GLfloat (&feedback)[rows][cols], const GLint& f
 				if (contourLine.size() > 2)
 				{
 					contour.push_back(contourLine);
-					contourLine.clear(); // TODO: check if causes trouble
+					contourLine.clear(); 
 				}
 			}
 		}
