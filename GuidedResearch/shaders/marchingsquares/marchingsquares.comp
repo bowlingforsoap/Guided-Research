@@ -108,7 +108,7 @@
 
 		//  emitDebug(ul);
 
-	
+
 		// Load the scalar values at the four corner points of the grid cell.
 		float ul_intensity = imageLoad(scalarField, ul).r;
 		float ur_intensity = imageLoad(scalarField, ur).r;

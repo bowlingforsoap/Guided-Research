@@ -8,19 +8,6 @@
 #include "labeler.h"
 #include "renderer.h"
 
-// Helper measurement macros. To be used together. Place before and after the code which you want to measure execution time for. 
-// iterations - the number of times to execute code;
-// result - total and mean time output in cout.
-#define measure_start(iterations) double timeDelta = glfwGetTime(); \
-	const int n = iterations; \
-	for (int i = 0; i < n; i++) {
-
-#define measure_end } \
-	timeDelta = (glfwGetTime() - timeDelta); \
-	std::cout << "Total time for n = " << n << " executions: " << timeDelta << '\n'; \
-	timeDelta /= n; \
-	std::cout << "Mean time per execution: " << timeDelta << '\n';
-
 
 /*
 scalarField:[[minX, maxX], [minY, maxY]]
@@ -89,12 +76,13 @@ int main() {
 	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
 
 	// Scalar Field setup
-	const GLint fieldWidth = 100;
-	const GLint fieldHeight = 100;
+	// TODO: Issues when fieldWidth != fieldHeight. Maybe the same ol' problem, but contouring must have something to do with it too.
+	const GLint fieldWidth = 50;
+	const GLint fieldHeight = 50;
 	GLfloat* scalarField = nullptr;
 	GLint* fieldCoords = nullptr;
 	GLint fieldCoordsSize;
-	generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -5, 3, 5, fieldCoords, fieldCoordsSize);
+	generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -8, 3, 8, fieldCoords, fieldCoordsSize);
 
 	// Check scalar field coords
 	/*cout << "\nScalar field:" << endl;
@@ -174,14 +162,14 @@ int main() {
 	vector<vector<Point>> candidatePositions;
 	candidatePositions.reserve(contour.size());
 	for (int i = 0; i < contour.size(); i++) {
-		candidatePositions.push_back(Labeler::findCandidatePositions(.3f, contour[i], angles[i]).position);
+		candidatePositions.push_back(Labeler::findCandidatePositions(.9f, contour[i], angles[i]).position);
 	}
 
 	// Draw the contour
 	srand(glfwGetTime());
-	renderContour(*window, contour);
+	renderContour(false, contour, GL_LINE_STRIP);
 	// May crash because of the case described in findCandidatePositions TODO
-	renderContour(*window, candidatePositions);
+	renderContour(true, candidatePositions, GL_LINE_STRIP);
 	glfwSwapBuffers(window);
 
 	system("pause");

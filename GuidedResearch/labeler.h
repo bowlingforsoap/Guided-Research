@@ -22,7 +22,7 @@ public:
 	// Searches for a point sequence, which comprises a broken line with minimal curvature and is at least labelLength long.
 	static CandidatePosition findCandidatePositions(GLfloat labelLength, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
 		// TODO: handle case, where label is longer than given contourLine. Maybe just store the contourLine's length somewhere, and if label is longer, just render it in the middle
-		if (angles[angles.size() - 1] == dummyValue) {
+		if (angles[angles.size() - 1] == dummyValue || angles[0] == dummyValue) {
 			return findCandidatePositionsForOpenedContour(labelLength, contourLine, angles);
 		}
 		else {
@@ -88,6 +88,13 @@ private:
 
 	static CandidatePosition findCandidatePositionsForOpenedContour(GLfloat labelLength, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
 		CandidatePosition candidatePosition;
+
+		// Check if contourLine is long enough to fit a label labelLength long.
+		candidatePosition = contourLineToCandidatePosition(contourLine, angles);
+		if (candidatePosition.length < labelLength) {
+			return candidatePosition;
+		}
+
 		candidatePosition.curvature = numeric_limits<float>::max();
 		candidatePosition.length = 0.f;
 
@@ -96,27 +103,28 @@ private:
 			CandidatePosition currentCandidate;
 			currentCandidate.position.clear();
 
-			int nextI = nextLoopedIndex(i, n);
+			int nextI = i + 1;
 			Point p1 = contourLine[i];
 			Point p2 = contourLine[nextI];
 			currentCandidate.position.push_back(p1);
 			currentCandidate.position.push_back(p2);
 			currentCandidate.length = magnitude(p1, p2);
+			currentCandidate.curvature = 0;
 
 			Point currPoint;
 			Point previousPoint = p2;
 			bool boundaryPoint;
-			for (int j = nextLoopedIndex(nextI, n); j < n; j++) {
-				 boundaryPoint = false;
+			for (int j = nextI + 1; j < n; j++) {
+				boundaryPoint = false;
 
 				currPoint = contourLine[j];
 				currentCandidate.length += magnitude(previousPoint, currPoint);
 				currentCandidate.position.push_back(currPoint);
 				// Check if we are at the NDC boundary and deal with angle accordingly
-				if (angles[prevLoopedIndex(j, n)] == dummyValue) {
+				if (angles[j - 1] == dummyValue) {
 					boundaryPoint = true;
 				} else {
-					currentCandidate.curvature += angles[prevLoopedIndex(j, n)];
+					currentCandidate.curvature += angles[j - 1];
 				}
 
 				if (currentCandidate.length >= labelLength) {
@@ -138,6 +146,13 @@ private:
 
 	static CandidatePosition findCandidatePositionsForClosedContour(GLfloat labelLength, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
 		CandidatePosition candidatePosition;
+
+		// Check if contourLine is long enough to fit a label labelLength long.
+		candidatePosition = contourLineToCandidatePosition(contourLine, angles);
+		if (candidatePosition.length < labelLength) {
+			return candidatePosition;
+		}
+
 		candidatePosition.curvature = numeric_limits<float>::max();
 		candidatePosition.length = 0.f;
 		int n = contourLine.size();
@@ -152,6 +167,7 @@ private:
 			currentCandidate.position.push_back(p1);
 			currentCandidate.position.push_back(p2);
 			currentCandidate.length = magnitude(p1, p2);
+			currentCandidate.curvature = 0;
 
 			Point currPoint;
 			Point previousPoint = p2;
@@ -172,6 +188,32 @@ private:
 				previousPoint = currPoint;
 				j = nextLoopedIndex(j, n);
 			}
+		}
+
+		return candidatePosition;
+	}
+
+	// TODO: can be made more efficient (i.e. do this when reconstruction a contourLine in contourer)
+	// Used to make sure the contourLine is long enough to fit contour.
+	static CandidatePosition contourLineToCandidatePosition(const vector<Point>& contourLine, const vector<GLfloat>& angles) {
+		CandidatePosition candidatePosition;
+		candidatePosition.position = contourLine;
+		candidatePosition.length = 0.f;
+		candidatePosition.curvature = 0.f;
+
+		// Handle first
+		if (angles[0] != dummyValue) {
+			candidatePosition.curvature += angles[0];
+		}
+		candidatePosition.length += magnitude(contourLine[0], contourLine[1]);
+		// Handle everything in the middle
+		for (int i = 1; i < contourLine.size() - 1; i++) {
+			candidatePosition.length += magnitude(contourLine[i], contourLine[i + 1]);
+			candidatePosition.curvature += angles[i];
+		}
+		// Handle last
+		if (angles[contourLine.size() - 1] != dummyValue) {
+			candidatePosition.curvature += angles[contourLine.size() - 1];
 		}
 
 		return candidatePosition;

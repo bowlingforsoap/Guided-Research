@@ -10,13 +10,14 @@
 
 using namespace std;
 
-void renderContour(GLFWwindow& window, vector<vector<Point>>& contour)
+void renderContour(const bool& randColorsPerContourLine, vector<vector<Point>>& contour, const int& primitiveEnumType)
 {
 	Shader shader("shaders/reconstructedcontour/reconstructedcontour.vert", "shaders/reconstructedcontour/reconstructedcontour.frag", "");
 
 	GLuint VBO, VAO;
 	glGenBuffers(1, &VBO);
 	glGenVertexArrays(1, &VAO);
+	GLfloat colors[3]{ rand() / (GLfloat)RAND_MAX, rand() / (GLfloat)RAND_MAX, rand() / (GLfloat)RAND_MAX };
 	for (int i = 0; i < contour.size(); i++)
 	{
 		cout << "contour[" << i << "].size(): " << contour[i].size() << endl;
@@ -31,12 +32,15 @@ void renderContour(GLFWwindow& window, vector<vector<Point>>& contour)
 		glLineWidth(5.f);
 
 		shader.Use();
-		GLfloat colors[3]{rand() / (GLfloat) RAND_MAX, rand() / (GLfloat)RAND_MAX, rand() / (GLfloat)RAND_MAX };
+		if (randColorsPerContourLine) {
+			colors[0] = rand() / (GLfloat)RAND_MAX;
+			colors[1] = rand() / (GLfloat)RAND_MAX;
+			colors[2] = rand() / (GLfloat)RAND_MAX;
+		}
 		glUniform3f(glGetUniformLocation(shader.Program, "u_Color"), colors[0], colors[1], colors[2]);
-		glDrawArrays(GL_LINE_LOOP, 0, contour[i].size());
+		glDrawArrays(primitiveEnumType, 0, contour[i].size());
 		glBindVertexArray(0);
 	}
-	//glfwSwapBuffers(&window);
 	// Clean-up
 	glDeleteBuffers(1, &VBO);
 	glDeleteVertexArrays(1, &VAO);
