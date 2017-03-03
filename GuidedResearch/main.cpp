@@ -11,10 +11,10 @@
 
 /*
 scalarField:[[minX, maxX], [minY, maxY]]
-fieldCoords:[[0, width - 2], [0, height - 2]]
+fieldCoords:[[0, charWidth - 2], [0, charHeight - 2]]
 */
 // Generates scalar field (which can be placed in a texture) and texture coordinates for it.
-inline void generateScalarField(GLfloat* &scalarField, GLint width, GLint height, GLfloat minX, GLfloat minY, GLfloat maxX, GLfloat maxY, GLint* &fieldCoords, GLint &fieldCoordsSize);
+inline void generateScalarField(GLfloat* &scalarField, GLint charWidth, GLint charHeight, GLfloat minX, GLfloat minY, GLfloat maxX, GLfloat maxY, GLint* &fieldCoords, GLint &fieldCoordsSize);
 
 // Print contents of currently bound GL_TRANSFORM_FEEDBACK_BUFFER as GLfloat.
 inline void printBufferContents(int buffer, GLintptr offset, GLsizei length);
@@ -46,10 +46,10 @@ void printImageContents(const GLuint& contourTex, GLfloat(&contourTexData)[cols]
 }
 
 int main() {
-	GLint width = 1600, height = 1000;
-	GLFWwindow* window = glfwInitialize(width, height, "Guided Research", 4, 4, false);
+	GLint charWidth = 1500, charHeight = 1500;
+	GLFWwindow* window = glfwInitialize(charWidth, charHeight, "Guided Research", 4, 4, false);
 	glewInit();
-	glViewport(0, 0, width, height);
+	glViewport(0, 0, charWidth, charHeight);
 
 	// Setup compute shader
 	GLuint computeShader = glCreateShader(GL_COMPUTE_SHADER);
@@ -115,6 +115,7 @@ int main() {
 	glBindImageTexture(0, scalarFieldTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	//cout << glGetError() << endl;
+	GL_ERROR_CHECK;
 	delete[] scalarField;
 
 	// Setup the output image for the texture
@@ -158,19 +159,48 @@ int main() {
 	vector<vector<Point>> contour = getContour(contourTexData, fieldWidth, fieldHeight, dummyValue);
 	cout << "contour size: " << contour.size() << endl;
 
+	// Find candidate positions for the contour
 	vector<vector<GLfloat>> angles = Labeler::computeCurvatureAngles(contour);
 	vector<vector<Point>> candidatePositions;
 	candidatePositions.reserve(contour.size());
+	// Construct labels
+	Labeler::Label label(20, .05f, .1f);
+	vector<Labeler::Label> labels(contour.size(), label);
+	// Look for candidate positions
 	for (int i = 0; i < contour.size(); i++) {
-		candidatePositions.push_back(Labeler::findCandidatePositions(.5f, contour[i], angles[i]).position);
+		candidatePositions.push_back(Labeler::findCandidatePositions(label.getTotalWidth(), contour[i], angles[i]).position);
 	}
 
 	// Draw the contour
 	srand(glfwGetTime());
 	renderContour(false, contour, GL_LINE_STRIP);
+
+	// Render labels
+	/*glm::mat4 mvp(1.f);
+	mvp = glm::translate(mvp, glm::vec3(.5f, 0.f, 0.f));
+	mvp = glm::rotate(mvp, static_cast<GLfloat>(15. * M_PI / 180.), glm::vec3(0.f, 0.f, 1.f));
+	Labeler::LabelCharacter labelChar(.05f, .1f);
+	for (int i = 0; i < 4; i++) {
+		glm::vec4 transformedPoint = mvp* glm::vec4(labelChar.points[i].x, labelChar.points[i].y, 0.f, 1.f);
+		labelChar.points[i] = Point{transformedPoint.x, transformedPoint.y};
+	}*/
+
+	// Draw the contour
+	//renderContour(false, contour, GL_LINE_LOOP);
+	//// May crash because of the case described in findCandidatePositions TODO
+	//renderContour(true, candidatePositions, GL_LINE_STRIP);
+	for (size_t i = 0; i < candidatePositions.size(); i++)
+	{
+		Labeler::positionLabelOnLine(labels[i], candidatePositions[i]);
+		renderLabel(Labeler::labelToPositionsArray(labels[i]));
+		//glfwSwapBuffers(window);
+	}
+
 	// May crash because of the case described in findCandidatePositions TODO
+	// Draw candidate positions
 	renderContour(true, candidatePositions, GL_LINE_STRIP);
 	glfwSwapBuffers(window);
+	//glfwSwapBuffers(window);
 
 	system("pause");
 	glfwTerminate();
@@ -179,31 +209,31 @@ int main() {
 
 /*
 scalarField:[[minX, maxX], [minY, maxY]]
-fieldCoords:[[0, width - 2], [0, height - 2]]
+fieldCoords:[[0, charWidth - 2], [0, charHeight - 2]]
 */
 // Generates scalar field (which can be placed in a texture) and texture coordinates for it.
-void generateScalarField(GLfloat* &scalarField, GLint width, GLint height, GLfloat minX, GLfloat minY, GLfloat maxX, GLfloat maxY, GLint* &fieldCoords, GLint &fieldCoordsSize) {
-	scalarField = new GLfloat[width * height];
-	float xDelta = abs(maxX - minX) / width;
-	float yDelta = abs(maxY - minY) / height;
+void generateScalarField(GLfloat* &scalarField, GLint charWidth, GLint charHeight, GLfloat minX, GLfloat minY, GLfloat maxX, GLfloat maxY, GLint* &fieldCoords, GLint &fieldCoordsSize) {
+	scalarField = new GLfloat[charWidth * charHeight];
+	float xDelta = abs(maxX - minX) / charWidth;
+	float yDelta = abs(maxY - minY) / charHeight;
 	// Fill scalar field with f:sin(x)*cos(x)
-	for (int i = 0; i < width; i++) {
-		for (int j = 0; j < height; j++) {
-			scalarField[i * height + j] = sin(minX + xDelta * i) * cos(minY + yDelta * j);
-			//assert(!isnan(scalarField[i * height + j]));
-			if (isnan(scalarField[i * height + j])) {
+	for (int i = 0; i < charWidth; i++) {
+		for (int j = 0; j < charHeight; j++) {
+			scalarField[i * charHeight + j] = sin(minX + xDelta * i) * cos(minY + yDelta * j);
+			//assert(!isnan(scalarField[i * charHeight + j]));
+			if (isnan(scalarField[i * charHeight + j])) {
 				system("pause");
 			}
 		}
 	}
 
 	// Fill fieldCoords: coordinates of the upper left corner of each square in context of marching squares
-	fieldCoordsSize = (width - 1) * (height - 1) * 2;
+	fieldCoordsSize = (charWidth - 1) * (charHeight - 1) * 2;
 	fieldCoords = new GLint[fieldCoordsSize];
 	int i = 0;
-	while (i < (width - 1) * (height - 1)) {
-		fieldCoords[i * 2] = i / (height - 1);
-		fieldCoords[i * 2 + 1] = i % (height - 1);
+	while (i < (charWidth - 1) * (charHeight - 1)) {
+		fieldCoords[i * 2] = i / (charHeight - 1);
+		fieldCoords[i * 2 + 1] = i % (charHeight - 1);
 		i = i++;
 	}
 }

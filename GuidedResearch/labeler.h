@@ -9,8 +9,14 @@
 
 #include "point.h"
 
+// Debug
+//#include "renderer.h"
+//#include <GLFW\glfw3.h>
+//#include <GL\glew.h>
+
 using namespace std;
 
+// TODO: revise what to leave public and what to incapsulate.
 class Labeler {
 public:
 	struct CandidatePosition {
@@ -19,9 +25,109 @@ public:
 		vector<Point> position;
 	};
 
-	// Searches for a point sequence, which comprises a broken line with minimal curvature and is at least labelLength long.
+
+	// Points go clockwise in 'z' shape starting from top left point a.
+	struct LabelCharacter {
+		Point points[4];
+
+		// Constructs a label character with center at (0, 0).
+		LabelCharacter(const GLfloat& charWidth, const GLfloat& charHeight) {
+			GLfloat halfWidth = charWidth / 2.f;
+			GLfloat halfHeight = charHeight / 2.f;
+			points[0] = { -halfWidth, halfHeight };
+			points[1] = { halfWidth, halfHeight };
+			points[2] = { -halfWidth, -halfHeight };
+			points[3] = { halfWidth, -halfHeight };
+		}
+	};
+
+	// Reresents one label.
+	struct Label {
+		GLfloat charWidth;
+		GLfloat charHeight;
+		vector<LabelCharacter> chars;
+
+		// Constructs a label of numChars characters with the given charWidth and charHeight.
+		Label(const int& numChars, const GLfloat& charWidth, const GLfloat& charHeight) {
+			this->charWidth = charWidth;
+			this->charHeight = charHeight;
+			chars = vector<LabelCharacter>(numChars, LabelCharacter(charWidth, charHeight));
+		}		
+
+		GLfloat getTotalWidth() {
+			return charWidth * chars.size();
+		}
+	};
+
+	// Converts LabelChar's points in a Label into a continious array of positions to be rendered. 
+	static vector<Point> labelToPositionsArray(const Label& label) {
+		vector<Point> positionsArray;
+		positionsArray.reserve(label.chars.size() * 6); // 2 triangles per square == 6 points
+	
+		for (size_t i = 0; i < label.chars.size(); i++)
+		{
+			// First triangle
+			positionsArray.push_back(label.chars[i].points[0]);
+			positionsArray.push_back(label.chars[i].points[1]);
+			positionsArray.push_back(label.chars[i].points[2]);
+			// Second triangle
+			positionsArray.push_back(label.chars[i].points[1]);
+			positionsArray.push_back(label.chars[i].points[2]);
+			positionsArray.push_back(label.chars[i].points[3]);
+		}
+
+		return positionsArray;
+	}
+
+	// Positions a provided label on the given line.
+	// line - can be contour line or if the it's too short a line to place the label on.
+	static void positionLabelOnLine(Label& label, const vector<Point>& line) {
+		vector<GLfloat> distances = computeDistancesForLine(line);
+
+		size_t start = 1;
+		for (size_t i = 0; i < label.chars.size(); i++)
+		{
+			for (size_t j = start; j < distances.size(); j++)
+			{
+				GLfloat distanceToCharCenter = label.charWidth * i + label.charWidth / 2.f;
+				if (distances[j] > distanceToCharCenter) {
+					// Debug
+					// Calculate transformation matrix for each point of a label's character
+					glm::mat4 transf(1.f);
+					// Translation
+					GLfloat fraction = (distanceToCharCenter - distances[j - 1]) / (distances[j] - distances[j - 1]);
+					Point prevPoint = line[j - 1];
+					Point currPoint = line[j];
+					glm::vec3 translation = glm::vec3(
+						glm::mix(glm::vec2(prevPoint.x, prevPoint.y), glm::vec2(currPoint.x, currPoint.y), fraction),
+						0.f
+					);
+					transf = glm::translate(transf, translation);
+					// Rotation
+					Point lineSegment = currPoint - prevPoint;
+					GLfloat angle = atan2(lineSegment.y, lineSegment.x);// *180.f / M_PI;
+					transf = glm::rotate(transf, angle, glm::vec3(0.f, 0.f, 1.f));
+					// Apply transformation
+					for (size_t k = 0; k < 4; k++)
+					{
+						glm::vec4 transfPoint = transf * glm::vec4(label.chars[i].points[k].x, label.chars[i].points[k].y, 0.f, 1.f);
+						label.chars[i].points[k] = Point{ transfPoint.x, transfPoint.y };
+					}
+
+					// Debug char render
+					/*glfwSwapBuffers(window);
+					renderLabelCharacter(label.chars[i].points);
+					glfwSwapBuffers(window);*/
+
+					start = j;
+					break;
+				}
+			}
+		}
+	}
+
+	// Looks for a candidate position for a contourLine. Tries to find a point sequence, which comprises a broken line with minimal curvature and is at least labelLength long.
 	static CandidatePosition findCandidatePositions(GLfloat labelLength, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
-		// TODO: for the 2 methods below, store length / angle, as opposed to just an agnle. Also an angle computation may need some changing (possibly: 180 - current angle)
 		if (angles[angles.size() - 1] == dummyValue || angles[0] == dummyValue) {
 			return findCandidatePositionsForOpenedContour(labelLength, contourLine, angles);
 		}
@@ -76,6 +182,25 @@ public:
 	}
 
 private:
+	// Computes distances from the beginning of the line to each of its points.
+	static vector<GLfloat> computeDistancesForLine(const vector<Point>& line) {
+		vector<GLfloat> distances;
+		distances.push_back(0.f);
+
+		GLfloat prevDistance = 0;
+		Point prevPoint = line[0];
+		for (size_t i = 1; i < line.size(); i++)
+		{
+			GLfloat currDistance = magnitude(prevPoint, line[i]);
+			distances.push_back(currDistance + prevDistance);
+
+			prevPoint = line[i];
+			prevDistance += currDistance;
+		}
+
+		return distances;
+	}
+
 	// Returns the next looped index for i:[0, n - 1]. If i == (n - 1), returns 0.
 	static inline int nextLoopedIndex(const int& i, const int& n) {
 		return (i == n - 1) ? 0 : i + 1;
