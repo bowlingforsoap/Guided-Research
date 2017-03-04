@@ -77,12 +77,13 @@ int main() {
 
 	// Scalar Field setup
 	// TODO: Issues when fieldWidth != fieldHeight. Maybe the same ol' problem, but contouring must have something to do with it too.
-	const GLint fieldWidth = 10;
-	const GLint fieldHeight = 10;
+	const GLint fieldWidth = 100;
+	const GLint fieldHeight = 100;
 	GLfloat* scalarField = nullptr;
 	GLint* fieldCoords = nullptr;
 	GLint fieldCoordsSize;
-	generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -8, 3, 8, fieldCoords, fieldCoordsSize);
+	//generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -8, 3, 8, fieldCoords, fieldCoordsSize);
+	generateScalarField(scalarField, fieldWidth, fieldHeight, -8, -3, 8, 3, fieldCoords, fieldCoordsSize);
 
 	// Check scalar field coords
 	/*cout << "\nScalar field:" << endl;
@@ -164,11 +165,11 @@ int main() {
 	vector<vector<Point>> candidatePositions;
 	candidatePositions.reserve(contour.size());
 	// Construct labels
-	Labeler::Label label(20, .05f, .1f);
+	Labeler::Label label(15, .05f, .1f);
 	vector<Labeler::Label> labels(contour.size(), label);
 	// Look for candidate positions
 	for (int i = 0; i < contour.size(); i++) {
-		candidatePositions.push_back(Labeler::findCandidatePositions(label.getTotalWidth(), contour[i], angles[i]).position);
+		candidatePositions.push_back(Labeler::findCandidatePositions(label.getTotalWidth(), label.charHeight, contour[i], angles[i]).position);
 	}
 
 	// Draw the contour
@@ -184,17 +185,17 @@ int main() {
 		glm::vec4 transformedPoint = mvp* glm::vec4(labelChar.points[i].x, labelChar.points[i].y, 0.f, 1.f);
 		labelChar.points[i] = Point{transformedPoint.x, transformedPoint.y};
 	}*/
-
-	// Draw the contour
-	//renderContour(false, contour, GL_LINE_LOOP);
-	//// May crash because of the case described in findCandidatePositions TODO
-	//renderContour(true, candidatePositions, GL_LINE_STRIP);
+	// Turn on wireframe mode
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	for (size_t i = 0; i < candidatePositions.size(); i++)
 	{
 		Labeler::positionLabelOnLine(labels[i], candidatePositions[i]);
 		renderLabel(Labeler::labelToPositionsArray(labels[i]));
-		//glfwSwapBuffers(window);
+		/*glfwSwapBuffers(window);
+		glfwSwapBuffers(window);*/
 	}
+	// Turn off wireframe mode
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// May crash because of the case described in findCandidatePositions TODO
 	// Draw candidate positions

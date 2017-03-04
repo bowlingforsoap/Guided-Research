@@ -49,7 +49,7 @@ void renderContour(const bool& randColorsPerContourLine, vector<vector<Point>>& 
 
 // Debug only
 template <size_t rows>
-void renderLabelCharacter(const Point (&charPoints)[rows])
+void renderLabelCharacter(const Point(&charPoints)[rows])
 {
 	Shader shader("shaders/renderer/char.vert", "shaders/renderer/char.frag", "");
 
@@ -81,18 +81,18 @@ void renderLabel(const vector<Point>& labelPositionsArray)
 	GLuint VBO, VAO;
 	glGenBuffers(1, &VBO);
 	glGenVertexArrays(1, &VAO);
-		
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, labelPositionsArray.size() * sizeof(GLfloat) * 2, &labelPositionsArray[0], GL_STATIC_DRAW);
 
-		glBindVertexArray(VAO);
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, labelPositionsArray.size() * sizeof(GLfloat) * 2, &labelPositionsArray[0], GL_STATIC_DRAW);
 
-		shader.Use();
-		//glUniformMatrix3fv(glGetUniformLocation(shader.Program, "mvp"), 1, GL_FALSE, &mvp[0][0]);
-		glDrawArrays(GL_TRIANGLES, 0, labelPositionsArray.size());
-		glBindVertexArray(0);
+	glBindVertexArray(VAO);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
+
+	shader.Use();
+	//glUniformMatrix3fv(glGetUniformLocation(shader.Program, "mvp"), 1, GL_FALSE, &mvp[0][0]);
+	glDrawArrays(GL_TRIANGLES, 0, labelPositionsArray.size());
+	glBindVertexArray(0);
 
 	// Clean-up
 	glDeleteBuffers(1, &VBO);

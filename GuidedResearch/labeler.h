@@ -127,12 +127,12 @@ public:
 	}
 
 	// Looks for a candidate position for a contourLine. Tries to find a point sequence, which comprises a broken line with minimal curvature and is at least labelLength long.
-	static CandidatePosition findCandidatePositions(GLfloat labelLength, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
+	static CandidatePosition findCandidatePositions(const GLfloat& labelLength, const GLfloat& labelHeight, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
 		if (angles[angles.size() - 1] == dummyValue || angles[0] == dummyValue) {
-			return findCandidatePositionsForOpenedContour(labelLength, contourLine, angles);
+			return findCandidatePositionsForOpenedContour(labelLength, labelHeight, contourLine, angles);
 		}
 		else {
-			return findCandidatePositionsForClosedContour(labelLength, contourLine, angles);
+			return findCandidatePositionsForClosedContour(labelLength, labelHeight, contourLine, angles);
 		}
 	}
 
@@ -211,12 +211,41 @@ private:
 		return (i == 0) ? n - 1 : i - 1;
 	}
 
-	static CandidatePosition findCandidatePositionsForOpenedContour(GLfloat labelLength, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
+	static CandidatePosition candidatePositionForShortContourLine(/*const CandidatePosition& candidatePosition,*/ const GLfloat& labelLength, const GLfloat& labelHeight, const vector<Point>& contourLine) {
+		CandidatePosition result;
+		Point start;
+
+		Point labelPoint = contourLine[0];
+		// Decide top or bottom
+		if (labelPoint.y >= 0.f) {
+			start.y = labelPoint.y - labelHeight / 2.f;
+		}
+		else {
+			start.y = labelPoint.y + labelHeight / 2.f;
+		}
+		// Decide left or right
+		if (labelPoint.x >= 0.f) {
+			start.x = labelPoint.x - labelLength;
+		}
+		else {
+			start.x = labelPoint.x;
+		}
+
+		result.curvature = 0.f;
+		result.length = labelLength;
+		result.position.push_back(start);
+		result.position.push_back(Point{ start.x + labelLength, start.y });
+		
+		return result;
+	}
+
+	static CandidatePosition findCandidatePositionsForOpenedContour(const GLfloat& labelLength, const GLfloat& labelHeight, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
 		CandidatePosition candidatePosition;
 
 		// Check if contourLine is long enough to fit a label labelLength long.
 		candidatePosition = contourLineToCandidatePosition(contourLine, angles);
 		if (candidatePosition.length < labelLength) {
+			candidatePosition = candidatePositionForShortContourLine(labelLength, labelHeight, contourLine);
 			return candidatePosition;
 		}
 
@@ -269,12 +298,13 @@ private:
 		return candidatePosition;
 	}
 
-	static CandidatePosition findCandidatePositionsForClosedContour(GLfloat labelLength, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
+	static CandidatePosition findCandidatePositionsForClosedContour(const GLfloat& labelLength, const GLfloat& labelHeight, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
 		CandidatePosition candidatePosition;
 
 		// Check if contourLine is long enough to fit a label labelLength long.
 		candidatePosition = contourLineToCandidatePosition(contourLine, angles);
 		if (candidatePosition.length < labelLength) {
+			candidatePosition = candidatePositionForShortContourLine(labelLength, labelHeight, contourLine);
 			return candidatePosition;
 		}
 
@@ -319,10 +349,10 @@ private:
 	}
 
 	// TODO: can be made more efficient (i.e. do this when reconstruction a contourLine in contourer)
-	// Used to make sure the contourLine is long enough to fit contour.
+	// Makes sure the contourLine is long enough to fit contour.
 	static CandidatePosition contourLineToCandidatePosition(const vector<Point>& contourLine, const vector<GLfloat>& angles) {
 		CandidatePosition candidatePosition;
-		candidatePosition.position = contourLine;
+		candidatePosition.position = contourLine; // is this necessary?
 		candidatePosition.length = 0.f;
 		candidatePosition.curvature = 0.f;
 
