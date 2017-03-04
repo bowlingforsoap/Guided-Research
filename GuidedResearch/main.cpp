@@ -77,8 +77,8 @@ int main() {
 
 	// Scalar Field setup
 	// TODO: Issues when fieldWidth != fieldHeight. Maybe the same ol' problem, but contouring must have something to do with it too.
-	const GLint fieldWidth = 100;
-	const GLint fieldHeight = 100;
+	const GLint fieldWidth = 10;
+	const GLint fieldHeight = 10;
 	GLfloat* scalarField = nullptr;
 	GLint* fieldCoords = nullptr;
 	GLint fieldCoordsSize;

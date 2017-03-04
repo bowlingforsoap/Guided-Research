@@ -52,7 +52,7 @@ public:
 			this->charWidth = charWidth;
 			this->charHeight = charHeight;
 			chars = vector<LabelCharacter>(numChars, LabelCharacter(charWidth, charHeight));
-		}		
+		}
 
 		GLfloat getTotalWidth() {
 			return charWidth * chars.size();
@@ -63,7 +63,7 @@ public:
 	static vector<Point> labelToPositionsArray(const Label& label) {
 		vector<Point> positionsArray;
 		positionsArray.reserve(label.chars.size() * 6); // 2 triangles per square == 6 points
-	
+
 		for (size_t i = 0; i < label.chars.size(); i++)
 		{
 			// First triangle
@@ -147,35 +147,46 @@ public:
 			contourLineAngles.reserve(contourLine.size());
 			Point pointA, pointB, pointC;
 
-			for (int i = 1; i < contourLine.size() - 1; i++) {
-				pointA = contourLine[i - 1];
-				pointB = contourLine[i];
-				pointC = contourLine[i + 1];
+			if (contourLine.size() > 2) // case for 1-segment contourLine
+			{
+				for (int i = 1; i < contourLine.size() - 1; i++) 
+				{
+					pointA = contourLine[i - 1];
+					pointB = contourLine[i];
+					pointC = contourLine[i + 1];
 
-				contourLineAngles.push_back(deltaAngleBetweenLines(pointA, pointB, pointC));
+					contourLineAngles.push_back(deltaAngleBetweenLines(pointA, pointB, pointC));
+				}
+
+				// Store the angle for the last.. 
+				if (abs(abs(pointC.x) - 1.f) < epsilon || abs(abs(pointC.y) - 1.f) < epsilon) {
+					// Store dummyValue if we are at the edge
+					contourLineAngles.push_back(dummyValue);
+				}
+				else {
+					pointA = contourLine[0];
+					contourLineAngles.push_back(deltaAngleBetweenLines(pointB, pointC, pointA));
+				}
+				// ..and the first point
+				pointB = contourLine[0];
+				if (abs(abs(pointB.x) - 1.f) < epsilon || abs(abs(pointB.y) - 1.f) < epsilon) {
+					contourLineAngles.insert(contourLineAngles.begin(), dummyValue);
+				}
+				else {
+					pointA = contourLine[contourLine.size() - 1];
+					pointC = contourLine[1];
+					contourLineAngles.insert(contourLineAngles.begin(), deltaAngleBetweenLines(pointA, pointB, pointC));
+				}
+
 			}
-
-			// Store the angle for the last.. 
-			if (abs(abs(pointC.x) - 1.f) < epsilon || abs(abs(pointC.y) - 1.f) < epsilon) {
-				// Store dummyValue if we are at the edge
+			else 
+			{
 				contourLineAngles.push_back(dummyValue);
-			}
-			else {
-				pointA = contourLine[0];
-				contourLineAngles.push_back(deltaAngleBetweenLines(pointB, pointC, pointA));
-			}
-			// ..and the first point
-			pointB = contourLine[0];
-			if (abs(abs(pointB.x) - 1.f) < epsilon || abs(abs(pointB.y) - 1.f) < epsilon) {
-				contourLineAngles.insert(contourLineAngles.begin(), dummyValue);
-			}
-			else {
-				pointA = contourLine[contourLine.size() - 1];
-				pointC = contourLine[1];
-				contourLineAngles.insert(contourLineAngles.begin(), deltaAngleBetweenLines(pointA, pointB, pointC));
+				contourLineAngles.push_back(dummyValue);
 			}
 
 			angles.push_back(contourLineAngles);
+
 		}
 
 		return angles;
@@ -235,7 +246,7 @@ private:
 		result.length = labelLength;
 		result.position.push_back(start);
 		result.position.push_back(Point{ start.x + labelLength, start.y });
-		
+
 		return result;
 	}
 
@@ -277,7 +288,8 @@ private:
 				// Check if we are at the NDC boundary and deal with angle accordingly
 				if (angles[j - 1] == dummyValue) {
 					boundaryPoint = true;
-				} else {
+				}
+				else {
 					currentCandidate.curvature += angles[j - 1];
 				}
 
@@ -286,7 +298,8 @@ private:
 						candidatePosition = currentCandidate;
 					}
 					break;
-				} else if (boundaryPoint) {
+				}
+				else if (boundaryPoint) {
 					break;
 				}
 
