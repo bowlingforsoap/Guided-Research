@@ -19,6 +19,9 @@ inline void generateScalarField(GLfloat* &scalarField, GLint charWidth, GLint ch
 // Print contents of currently bound GL_TRANSFORM_FEEDBACK_BUFFER as GLfloat.
 inline void printBufferContents(int buffer, GLintptr offset, GLsizei length);
 
+vector<Labeler::Label> Labeler::overlappingLabels; // Debug
+GLFWwindow* Labeler::window;
+
 template<size_t cols, size_t rows>
 void printImageContents(const GLuint& contourTex, GLfloat(&contourTexData)[cols][rows], const GLfloat& dummyValue) {
 	glActiveTexture(GL_TEXTURE1);
@@ -48,6 +51,7 @@ void printImageContents(const GLuint& contourTex, GLfloat(&contourTexData)[cols]
 int main() {
 	GLint charWidth = 1500, charHeight = 1500;
 	GLFWwindow* window = glfwInitialize(charWidth, charHeight, "Guided Research", 4, 4, false);
+	Labeler::window = window;// debug
 	glewInit();
 	glViewport(0, 0, charWidth, charHeight);
 
@@ -82,8 +86,8 @@ int main() {
 	GLfloat* scalarField = nullptr;
 	GLint* fieldCoords = nullptr;
 	GLint fieldCoordsSize;
-	//generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -8, 3, 8, fieldCoords, fieldCoordsSize);
-	generateScalarField(scalarField, fieldWidth, fieldHeight, -8, -3, 8, 3, fieldCoords, fieldCoordsSize);
+	generateScalarField(scalarField, fieldWidth, fieldHeight, -8, -8, 8, 8, fieldCoords, fieldCoordsSize);
+	//generateScalarField(scalarField, fieldWidth, fieldHeight, -8, -3, 8, 3, fieldCoords, fieldCoordsSize);
 
 	// Check scalar field coords
 	/*cout << "\nScalar field:" << endl;
@@ -165,16 +169,47 @@ int main() {
 	vector<vector<Point>> candidatePositions;
 	candidatePositions.reserve(contour.size());
 	// Construct labels
-	Labeler::Label label(15, .05f, .1f);
+	Labeler::Label label(10, .025f, .1f);
 	vector<Labeler::Label> labels(contour.size(), label);
 	// Look for candidate positions
+	// Turn on wireframe mode
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	
+	glfwSwapBuffers(window);
 	for (int i = 0; i < contour.size(); i++) {
-		candidatePositions.push_back(Labeler::findCandidatePositions(label.getTotalWidth(), label.charHeight, contour[i], angles[i]).position);
-	}
+		// Find candidate position
+		Labeler::CandidatePosition candidatePosition = Labeler::findCandidatePositions(label.getTotalWidth(), label.charHeight, contour[i], angles[i]);
+		candidatePositions.push_back(candidatePosition.position);
 
+		// Place label onto it
+		labels[i].straight = candidatePosition.straight;
+		Labeler::positionLabelOnLine(labels[i], candidatePositions[i]);
+
+		// Render label
+		glfwSwapBuffers(window);
+		renderLabel(Labeler::labelToPositionsArray(labels[i]));
+		glfwSwapBuffers(window);
+
+		// Check for intersections
+		Labeler::intersect(labels, i, labels[i]);
+	}
+	// Turn off wireframe mode
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	// Debug
+	// Render the overlapping contours
+	glfwSwapBuffers(window);
+	for (Labeler::Label label : Labeler::overlappingLabels) {
+		renderLabel(Labeler::labelToPositionsArray(label));
+	}
+	glfwSwapBuffers(window);
+
+	glfwSwapBuffers(window);
 	// Draw the contour
 	srand(glfwGetTime());
 	renderContour(false, contour, GL_LINE_STRIP);
+	/*glfwSwapBuffers(window);
+	glfwSwapBuffers(window);*/
 
 	// Render labels
 	/*glm::mat4 mvp(1.f);
@@ -185,17 +220,6 @@ int main() {
 		glm::vec4 transformedPoint = mvp* glm::vec4(labelChar.points[i].x, labelChar.points[i].y, 0.f, 1.f);
 		labelChar.points[i] = Point{transformedPoint.x, transformedPoint.y};
 	}*/
-	// Turn on wireframe mode
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	for (size_t i = 0; i < candidatePositions.size(); i++)
-	{
-		Labeler::positionLabelOnLine(labels[i], candidatePositions[i]);
-		renderLabel(Labeler::labelToPositionsArray(labels[i]));
-		/*glfwSwapBuffers(window);
-		glfwSwapBuffers(window);*/
-	}
-	// Turn off wireframe mode
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// May crash because of the case described in findCandidatePositions TODO
 	// Draw candidate positions

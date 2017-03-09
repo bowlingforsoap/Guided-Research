@@ -10,7 +10,7 @@
 #include "point.h"
 
 // Debug
-//#include "renderer.h"
+#include "renderer.h"
 //#include <GLFW\glfw3.h>
 //#include <GL\glew.h>
 
@@ -19,25 +19,121 @@ using namespace std;
 // TODO: revise what to leave public and what to incapsulate.
 class Labeler {
 public:
+	static GLFWwindow* window; // debug
+
 	struct CandidatePosition {
 		GLfloat curvature;
 		GLfloat length;
 		vector<Point> position;
+		bool straight = false;
 	};
 
+	// Projection on a given axis.
+	struct Projection {
+		GLfloat min;
+		GLfloat max;
 
-	// Points go clockwise in 'z' shape starting from top left point a.
-	struct LabelCharacter {
+		// Checks if this Projection overlaps with projection.
+		bool overlaps(const Projection& projection) const {
+			if (max < projection.min || min > projection.max) {
+				return false;
+			}
+
+			return true;
+		}
+	};
+
+	// A bounding box (rectangle) for a LabelCharacter.
+	struct OrientedBoundingBox {
+		// Points go clockwise in 'z' shape starting from top left point.
 		Point points[4];
 
+		OrientedBoundingBox(Point p1, Point p2, Point p3, Point p4) {
+			points[0] = p1;
+			points[1] = p2;
+			points[2] = p3;
+			points[3] = p4;
+		}
+
 		// Constructs a label character with center at (0, 0).
-		LabelCharacter(const GLfloat& charWidth, const GLfloat& charHeight) {
+		OrientedBoundingBox(const GLfloat& charWidth, const GLfloat& charHeight) {
 			GLfloat halfWidth = charWidth / 2.f;
 			GLfloat halfHeight = charHeight / 2.f;
 			points[0] = { -halfWidth, halfHeight };
 			points[1] = { halfWidth, halfHeight };
 			points[2] = { -halfWidth, -halfHeight };
 			points[3] = { halfWidth, -halfHeight };
+		}
+
+		vector<Point> getAxes() const {
+			vector<Point> axes;
+			axes.push_back(points[0] - points[1]);
+			axes.push_back(points[0] - points[2]);
+			return axes;
+		}
+
+		// Projects this OBB onto the given axis.
+		Projection project(const Point& axis) const {
+			Projection p;
+			p.max = glm::dot(glm::vec2(axis.x, axis.y), glm::vec2(points[0].x, points[0].y));
+			p.min = p.max;
+
+			for (int i = 1; i < 4; i++)
+			{
+				// Normalization not needed if only boolean result is required.
+				GLfloat temp = glm::dot(glm::vec2(axis.x, axis.y), glm::vec2(points[i].x, points[i].y));
+
+				if (temp > p.max)
+				{
+					p.max = temp;
+					continue;
+				}
+				if (temp < p.min)
+				{
+					p.min = temp;
+					continue;
+				}
+			}
+
+			return p;
+		}
+
+		// Checks if this OBB intersects obb.
+		bool intersects(const OrientedBoundingBox& obb) const {
+			vector<Point> axes1 = getAxes();
+			vector<Point> axes2 = obb.getAxes();
+
+			for (const Point& axis : axes1) {
+				Projection p1 = this->project(axis);
+				Projection p2 = obb.project(axis);
+
+				if (!p1.overlaps(p2)) { 
+					return false;
+				}
+			}
+
+			for (const Point& axis : axes2) {
+				Projection p1 = this->project(axis);
+				Projection p2 = obb.project(axis);
+
+				if (!p1.overlaps(p2)) {
+					return false;
+				}
+			}
+
+			return true;
+		}
+	};
+	
+	// Represents a single character in a Label.
+	struct LabelCharacter {
+		OrientedBoundingBox obb;
+		// TODO:
+		//char character;
+
+		// Constructs a label character with center at (0, 0).
+		LabelCharacter(/*char character, */const GLfloat& charWidth, const GLfloat& charHeight) : obb(charWidth, charHeight) {
+			//this.character = character;
 		}
 	};
 
@@ -46,18 +142,71 @@ public:
 		GLfloat charWidth;
 		GLfloat charHeight;
 		vector<LabelCharacter> chars;
+		bool straight;
 
+		Label() = delete;
 		// Constructs a label of numChars characters with the given charWidth and charHeight.
 		Label(const int& numChars, const GLfloat& charWidth, const GLfloat& charHeight) {
 			this->charWidth = charWidth;
 			this->charHeight = charHeight;
 			chars = vector<LabelCharacter>(numChars, LabelCharacter(charWidth, charHeight));
+			straight = false;
 		}
 
 		GLfloat getTotalWidth() {
 			return charWidth * chars.size();
 		}
+
+		// Returns the bounding boxes of chars of this Label needed for the intersection test. If Label is straight, returns the bounding, that contains the whole Label.
+		vector<OrientedBoundingBox> getOBBs() const {
+			vector<OrientedBoundingBox> obbs;
+
+			if (straight) {
+				LabelCharacter firstChar = chars[0];
+				LabelCharacter lastChar = chars[chars.size() - 1];
+				obbs.push_back(OrientedBoundingBox{
+					Point{firstChar.obb.points[0]}, Point{ lastChar.obb.points[1]}, 
+					Point{ firstChar.obb.points[2]}, Point{ lastChar.obb.points[3] }
+				});
+			}
+			else {
+				obbs.reserve(chars.size());
+				for (LabelCharacter character : chars) {
+					obbs.push_back(character.obb);
+				}
+			}
+
+			return obbs;
+		}
 	};
+
+	// Debug
+	static vector<Label> overlappingLabels;
+	// Conducts an intersection test between the Labels that were already added to the scene and a new one. Returns true if newLabel intersects with the any of the added ones; false - otherwise.
+	static bool intersect(const vector<Label>& addedLabels, const int& numLabelesAdded, Label newLabel) {
+		vector<OrientedBoundingBox> newLabelOBBs = newLabel.getOBBs();
+
+		for (int i = 0; i < numLabelesAdded; i++) {
+			vector<OrientedBoundingBox> addedLabelOBBs = addedLabels[i].getOBBs();
+
+			for (OrientedBoundingBox newLabelOBB : newLabelOBBs) {
+				for (OrientedBoundingBox addedLabelOBB : addedLabelOBBs) {
+					//glfwSwapBuffers(window);
+					////glClear(GL_COLOR_BUFFER_BIT);
+					//render2Dsmth(newLabelOBB.points, 4, GL_TRIANGLE_STRIP, glm::vec3(0.f, 1.f, 0.f));
+					//render2Dsmth(addedLabelOBB.points, 4, GL_TRIANGLE_STRIP, glm::vec3(1.f, 0.f, 0.f));
+					//glfwSwapBuffers(window);
+
+					if (newLabelOBB.intersects(addedLabelOBB)) {
+						overlappingLabels.push_back(newLabel); // Debug
+						return true;
+					}
+				}
+			}
+		}
+
+		return false;
+	}
 
 	// Converts LabelChar's points in a Label into a continious array of positions to be rendered. 
 	static vector<Point> labelToPositionsArray(const Label& label) {
@@ -67,13 +216,13 @@ public:
 		for (size_t i = 0; i < label.chars.size(); i++)
 		{
 			// First triangle
-			positionsArray.push_back(label.chars[i].points[0]);
-			positionsArray.push_back(label.chars[i].points[1]);
-			positionsArray.push_back(label.chars[i].points[2]);
+			positionsArray.push_back(label.chars[i].obb.points[0]);
+			positionsArray.push_back(label.chars[i].obb.points[1]);
+			positionsArray.push_back(label.chars[i].obb.points[2]);
 			// Second triangle
-			positionsArray.push_back(label.chars[i].points[1]);
-			positionsArray.push_back(label.chars[i].points[2]);
-			positionsArray.push_back(label.chars[i].points[3]);
+			positionsArray.push_back(label.chars[i].obb.points[1]);
+			positionsArray.push_back(label.chars[i].obb.points[2]);
+			positionsArray.push_back(label.chars[i].obb.points[3]);
 		}
 
 		return positionsArray;
@@ -110,8 +259,8 @@ public:
 					// Apply transformation
 					for (size_t k = 0; k < 4; k++)
 					{
-						glm::vec4 transfPoint = transf * glm::vec4(label.chars[i].points[k].x, label.chars[i].points[k].y, 0.f, 1.f);
-						label.chars[i].points[k] = Point{ transfPoint.x, transfPoint.y };
+						glm::vec4 transfPoint = transf * glm::vec4(label.chars[i].obb.points[k].x, label.chars[i].obb.points[k].y, 0.f, 1.f);
+						label.chars[i].obb.points[k] = Point{ transfPoint.x, transfPoint.y };
 					}
 
 					// Debug char render
@@ -149,7 +298,7 @@ public:
 
 			if (contourLine.size() > 2) // case for 1-segment contourLine
 			{
-				for (int i = 1; i < contourLine.size() - 1; i++) 
+				for (int i = 1; i < contourLine.size() - 1; i++)
 				{
 					pointA = contourLine[i - 1];
 					pointB = contourLine[i];
@@ -179,7 +328,7 @@ public:
 				}
 
 			}
-			else 
+			else
 			{
 				contourLineAngles.push_back(dummyValue);
 				contourLineAngles.push_back(dummyValue);
@@ -246,6 +395,7 @@ private:
 		result.length = labelLength;
 		result.position.push_back(start);
 		result.position.push_back(Point{ start.x + labelLength, start.y });
+		result.straight = true;
 
 		return result;
 	}

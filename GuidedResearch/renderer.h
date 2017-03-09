@@ -2,6 +2,7 @@
 
 #include <GLFW\glfw3.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <vector>
 #include <cstdlib>
 
@@ -30,7 +31,6 @@ void renderContour(const bool& randColorsPerContourLine, vector<vector<Point>>& 
 		glEnableVertexAttribArray(1);
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
 
-		glLineWidth(5.f);
 
 		shader.Use();
 		if (randColorsPerContourLine) {
@@ -39,7 +39,10 @@ void renderContour(const bool& randColorsPerContourLine, vector<vector<Point>>& 
 			colors[2] = rand() / (GLfloat)RAND_MAX;
 		}
 		glUniform3f(glGetUniformLocation(shader.Program, "u_Color"), colors[0], colors[1], colors[2]);
+		
+		glLineWidth(5.f);
 		glDrawArrays(primitiveEnumType, 0, contour[i].size());
+		glLineWidth(1.f);
 		glBindVertexArray(0);
 	}
 	// Clean-up
@@ -98,3 +101,34 @@ void renderLabel(const vector<Point>& labelPositionsArray)
 	glDeleteBuffers(1, &VBO);
 	glDeleteVertexArrays(1, &VAO);
 }
+
+// Debug only
+void render2Dsmth(const Point* points, const size_t& numPoints, const int& primitiveType, const glm::vec3& color)
+{
+	Shader shader("shaders/renderer/2Dsmth.vert", "shaders/renderer/2Dsmth.frag", "");
+
+	GLuint VBO, VAO;
+	glGenBuffers(1, &VBO);
+	glGenVertexArrays(1, &VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, numPoints * sizeof(GLfloat) * 2, &points[0], GL_STATIC_DRAW);
+
+	glBindVertexArray(VAO);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
+
+
+	shader.Use();
+	glUniform3fv(glGetUniformLocation(shader.Program, "u_Color"), 1, glm::value_ptr(color));
+
+	glLineWidth(5.f);
+	glDrawArrays(primitiveType, 0, numPoints);
+	glLineWidth(1.f);
+	glBindVertexArray(0);
+
+	// Clean-up
+	glDeleteBuffers(1, &VBO);
+	glDeleteVertexArrays(1, &VAO);
+}
+

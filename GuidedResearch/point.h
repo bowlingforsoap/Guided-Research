@@ -40,6 +40,11 @@ struct Point
 		return{ x - rhs.x, y - rhs.y };
 	}
 
+	inline Point operator-(const Point& rhs) const
+	{
+		return{ x - rhs.x, y - rhs.y };
+	}
+
 	inline bool operator<(const Point& rhs)
 	{
 		if (x < rhs.x && y < rhs.y)
@@ -49,4 +54,8 @@ struct Point
 
 		return false;
 	}
+
+	/*inline Point operator+(const Point& rhs) {
+		return Point{ x + rhs.x, y + rhs.y };
+	}*/
 };
