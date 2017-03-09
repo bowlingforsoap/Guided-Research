@@ -452,7 +452,7 @@ private:
 				}
 
 				if (currentCandidate.length >= labelLength) {
-					candidatePositions.push_back(candidatePosition);
+					candidatePositions.push_back(currentCandidate);
 					/*if (currentCandidate.curvature < candidatePosition.curvature) {
 						candidatePosition = currentCandidate;
 					}*/

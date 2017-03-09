@@ -113,9 +113,14 @@ int main() {
 		cout << fieldCoords[i] << ", ";
 	}*/
 
-	//.. need global storage for added labels
-	produceLabeledContour(scalarField, .7f, computeProgram, window);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	produceLabeledContour(scalarField, .5f, computeProgram, window);
 	produceLabeledContour(scalarField, .4f, computeProgram, window);
+	glfwSwapBuffers(window);
+	glfwSwapBuffers(window);
+
 	for (Labeler::Label label : addedLabels) {
 		renderLabel(Labeler::labelToPositionsArray(label));
 	}
@@ -208,6 +213,9 @@ void produceLabeledContour(GLfloat * scalarField, GLfloat isoValue, const GLuint
 
 				// ~Debug
 				finalCandidatePositions.push_back(candidatePosition.position);
+				/*render2Dsmth(&candidatePosition.position[0], candidatePosition.position.size(), GL_LINE_STRIP, glm::vec3(1.f, 0.f, 0.f));
+				glfwSwapBuffers(window);
+				glfwSwapBuffers(window);*/
 				
 				addedLabels.push_back(positionedLabel);
 
@@ -227,17 +235,6 @@ void produceLabeledContour(GLfloat * scalarField, GLfloat isoValue, const GLuint
 		}
 	}
 
-	// Render labels
-	//for (size_t i = 0; i < labels.size(); i++)
-	//{
-	//	//glfwSwapBuffers(window);
-	//	renderLabel(Labeler::labelToPositionsArray(labels[i]));
-	//	//glfwSwapBuffers(window);
-	//}
-
-	/*std::sort(finalCandidatePositions.begin(), finalCandidatePositions.end(), [](const Labeler::CandidatePosition& a, const Labeler::CandidatePosition& b) {
-	return b.curvature < a.curvature;
-	});*/
 	// Turn off wireframe mode
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -250,16 +247,6 @@ void produceLabeledContour(GLfloat * scalarField, GLfloat isoValue, const GLuint
 	// Draw the contour
 	srand(glfwGetTime());
 	renderContour(false, contour, GL_LINE_STRIP);
-
-	// Render labels
-	/*glm::mat4 mvp(1.f);
-	mvp = glm::translate(mvp, glm::vec3(.5f, 0.f, 0.f));
-	mvp = glm::rotate(mvp, static_cast<GLfloat>(15. * M_PI / 180.), glm::vec3(0.f, 0.f, 1.f));
-	Labeler::LabelCharacter labelChar(.05f, .1f);
-	for (int i = 0; i < 4; i++) {
-	glm::vec4 transformedPoint = mvp* glm::vec4(labelChar.points[i].x, labelChar.points[i].y, 0.f, 1.f);
-	labelChar.points[i] = Point{transformedPoint.x, transformedPoint.y};
-	}*/
 
 	// May crash because of the case described in findCandidatePositions TODO
 	// Draw candidate positions
