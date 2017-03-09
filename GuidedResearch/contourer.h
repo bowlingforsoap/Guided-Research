@@ -17,7 +17,7 @@ inline bool connectedLines(Line& currLine, Line& compareLine, const Line& dummyL
 
 // Returns all lines that belong to this contour.
 template <size_t rows, size_t cols>
-vector<vector<Point>> getContour(GLfloat(&feedback)[rows][cols], const GLint& fieldWidth, const GLint& fieldHeight, const GLfloat& dummyValue)
+vector<vector<Point>> getContour(GLfloat(&feedback)[rows][cols], const GLint& fieldWidth, const GLint& fieldHeight)
 {
 	// Final result container
 	vector<vector<Point>> contour;

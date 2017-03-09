@@ -41,5 +41,8 @@
     <ClInclude Include="meausrement.h">
       <Filter>Source Files\util</Filter>
     </ClInclude>
+    <ClInclude Include="main.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

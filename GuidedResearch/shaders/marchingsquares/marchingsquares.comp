@@ -6,7 +6,7 @@
 	layout (binding = 0, r32f) uniform image2D scalarField;
 	// Reconstructed contour
 	layout (binding = 1, rg32f) uniform image2DArray contour;
-	uniform vec3 isoValue;
+	uniform float isoValue;
 	// vec2(fieldWidth - 1, fieldHeight - 1)
 	uniform vec2 domainUpperBound;
 
@@ -121,7 +121,5 @@
 		vec2 ll_NDCposition = (ll / domainUpperBound - .5f) * 2.f;
 		vec2 lr_NDCposition = (lr / domainUpperBound - .5f) * 2.f;
 
-		emitIsoContour(isoValue.x, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
-		//emitIsoContour(isoValue.y, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
-		//emitIsoContour(isoValue.z, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
+		emitIsoContour(isoValue, ul_intensity, ur_intensity, ll_intensity, lr_intensity, ul_NDCposition, ur_NDCposition, ll_NDCposition, lr_NDCposition);
 	}

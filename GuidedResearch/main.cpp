@@ -3,10 +3,12 @@
 #include <SOIL.h>
 
 #include <iomanip>      // std::setprecision
+#include <algorithm>
 
 #include "contourer.h"
 #include "labeler.h"
 #include "renderer.h"
+#include "main.h"
 
 
 /*
@@ -48,6 +50,10 @@ void printImageContents(const GLuint& contourTex, GLfloat(&contourTexData)[cols]
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 }
 
+const GLint fieldWidth = 10;
+const GLint fieldHeight = 10;
+vector<Labeler::Label> addedLabels;
+
 int main() {
 	GLint charWidth = 1500, charHeight = 1500;
 	GLFWwindow* window = glfwInitialize(charWidth, charHeight, "Guided Research", 4, 4, false);
@@ -81,12 +87,10 @@ int main() {
 
 	// Scalar Field setup
 	// TODO: Issues when fieldWidth != fieldHeight. Maybe the same ol' problem, but contouring must have something to do with it too.
-	const GLint fieldWidth = 10;
-	const GLint fieldHeight = 10;
 	GLfloat* scalarField = nullptr;
 	GLint* fieldCoords = nullptr;
 	GLint fieldCoordsSize;
-	generateScalarField(scalarField, fieldWidth, fieldHeight, -8, -8, 8, 8, fieldCoords, fieldCoordsSize);
+	generateScalarField(scalarField, fieldWidth, fieldHeight, -3, -8, 3, 8, fieldCoords, fieldCoordsSize);
 	//generateScalarField(scalarField, fieldWidth, fieldHeight, -8, -3, 8, 3, fieldCoords, fieldCoordsSize);
 
 	// Check scalar field coords
@@ -109,8 +113,21 @@ int main() {
 		cout << fieldCoords[i] << ", ";
 	}*/
 
+	//.. need global storage for added labels
+	produceLabeledContour(scalarField, .7f, computeProgram, window);
+	produceLabeledContour(scalarField, .4f, computeProgram, window);
+	for (Labeler::Label label : addedLabels) {
+		renderLabel(Labeler::labelToPositionsArray(label));
+	}
+	glfwSwapBuffers(window);
 
+	system("pause");
+	glfwTerminate();
+	return 666;
+}
 
+void produceLabeledContour(GLfloat * scalarField, GLfloat isoValue, const GLuint &computeProgram, GLFWwindow * window)
+{
 	// Store scalar field into a texture
 	glActiveTexture(GL_TEXTURE0);
 	GLuint scalarFieldTex;
@@ -121,13 +138,12 @@ int main() {
 	glBindTexture(GL_TEXTURE_2D, 0);
 	//cout << glGetError() << endl;
 	GL_ERROR_CHECK;
-	delete[] scalarField;
+	//delete[] scalarField;
 
 	// Setup the output image for the texture
 	glActiveTexture(GL_TEXTURE1);
 	GLuint contourTex;
-	const GLfloat dummyValue = 666.f;
-	GLfloat dummyArray[2]{dummyValue, dummyValue};
+	GLfloat dummyArray[2]{ dummyValue, dummyValue };
 	glGenTextures(1, &contourTex);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
 	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RG32F, fieldWidth, fieldHeight, 4);
@@ -137,15 +153,15 @@ int main() {
 
 	// Set uniforms
 	glUseProgram(computeProgram);
-	glUniform3f(glGetUniformLocation(computeProgram, "isoValue"), .5f, .4f, .8f);
+	glUniform1f(glGetUniformLocation(computeProgram, "isoValue"), isoValue);
 	// TODO: check for zeroes
 	glUniform2f(glGetUniformLocation(computeProgram, "domainUpperBound"), fieldWidth - 1, fieldHeight - 1);
 	// Image units uniforms
 	glUniform1i(glGetUniformLocation(computeProgram, "scalarField"), 0);
 	glUniform1i(glGetUniformLocation(computeProgram, "contour"), 1);
 
-//	glClearColor(0.1f, 0.2, 0.1f, 1.f);
-//	glClear(GL_COLOR_BUFFER_BIT);
+	//	glClearColor(0.1f, 0.2, 0.1f, 1.f);
+	//	glClear(GL_COLOR_BUFFER_BIT);
 
 	// COMPUTER SHADER
 	glDispatchCompute(fieldWidth - 1, fieldHeight - 1, 1);
@@ -153,63 +169,87 @@ int main() {
 	//glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-	//glfwSwapBuffers(window);
-
 	// Read back the 2D array texture
 	GLfloat contourTexData[fieldWidth * 4][fieldHeight * 2];
 	cout << "sizeof(contourTexData): " << sizeof(contourTexData) << endl;
-	printImageContents(contourTex, contourTexData, dummyValue);
+	printImageContents(contourTex, contourTexData, dummyValue); // actually retrieves the image from OpenGL ¯\_(ツ)_/¯
 
 	// Sort the primitives and retrieve the contour
-	vector<vector<Point>> contour = getContour(contourTexData, fieldWidth, fieldHeight, dummyValue);
+	vector<vector<Point>> contour = getContour(contourTexData, fieldWidth, fieldHeight);
 	cout << "contour size: " << contour.size() << endl;
 
 	// Find candidate positions for the contour
 	vector<vector<GLfloat>> angles = Labeler::computeCurvatureAngles(contour);
-	vector<vector<Point>> candidatePositions;
-	candidatePositions.reserve(contour.size());
+	vector<vector<Point>> finalCandidatePositions;
+	finalCandidatePositions.reserve(contour.size());
 	// Construct labels
-	Labeler::Label label(10, .025f, .1f);
+	const Labeler::Label label(10, .05f, .1f);
 	vector<Labeler::Label> labels(contour.size(), label);
 	// Look for candidate positions
 	// Turn on wireframe mode
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	
-	glfwSwapBuffers(window);
 	for (int i = 0; i < contour.size(); i++) {
-		// Find candidate position
-		Labeler::CandidatePosition candidatePosition = Labeler::findCandidatePositions(label.getTotalWidth(), label.charHeight, contour[i], angles[i]);
-		candidatePositions.push_back(candidatePosition.position);
+		// Find candidate positions
+		vector<Labeler::CandidatePosition> candidatePositions = Labeler::findCandidatePositions(label.getTotalWidth(), label.charHeight, contour[i], angles[i]);
+		// Sort by ascending curvature
+		std::sort(candidatePositions.begin(), candidatePositions.end(), [](const Labeler::CandidatePosition& a, const Labeler::CandidatePosition& b) {return a.curvature < b.curvature; });
 
-		// Place label onto it
-		labels[i].straight = candidatePosition.straight;
-		Labeler::positionLabelOnLine(labels[i], candidatePositions[i]);
+		bool candidatePositionWasFound = false;
+		Labeler::Label positionedLabel;
+		for (const Labeler::CandidatePosition& candidatePosition : candidatePositions) {
+			// Place label onto candidatePosition
+			positionedLabel = label;
+			positionedLabel.straight = candidatePosition.straight;
+			Labeler::positionLabelOnLine(positionedLabel, candidatePosition.position);
 
-		// Render label
-		glfwSwapBuffers(window);
-		renderLabel(Labeler::labelToPositionsArray(labels[i]));
-		glfwSwapBuffers(window);
+			// Check for intersections
+			if (!Labeler::intersect(addedLabels, positionedLabel)) {
+				candidatePositionWasFound = true;
 
-		// Check for intersections
-		Labeler::intersect(labels, i, labels[i]);
+				// ~Debug
+				finalCandidatePositions.push_back(candidatePosition.position);
+				
+				addedLabels.push_back(positionedLabel);
+
+				break;
+			}
+			else {
+				continue;
+			}
+		}
+
+		// If all intersect with something
+		if (!candidatePositionWasFound) {
+			positionedLabel = label;
+			Labeler::positionLabelOnLine(positionedLabel, candidatePositions[0].position);
+			finalCandidatePositions.push_back(candidatePositions[0].position);
+			addedLabels.push_back(positionedLabel);
+		}
 	}
+
+	// Render labels
+	//for (size_t i = 0; i < labels.size(); i++)
+	//{
+	//	//glfwSwapBuffers(window);
+	//	renderLabel(Labeler::labelToPositionsArray(labels[i]));
+	//	//glfwSwapBuffers(window);
+	//}
+
+	/*std::sort(finalCandidatePositions.begin(), finalCandidatePositions.end(), [](const Labeler::CandidatePosition& a, const Labeler::CandidatePosition& b) {
+	return b.curvature < a.curvature;
+	});*/
 	// Turn off wireframe mode
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// Debug
 	// Render the overlapping contours
-	glfwSwapBuffers(window);
-	for (Labeler::Label label : Labeler::overlappingLabels) {
-		renderLabel(Labeler::labelToPositionsArray(label));
-	}
-	glfwSwapBuffers(window);
+	/*for (Labeler::Label label : Labeler::overlappingLabels) {
+	renderLabel(Labeler::labelToPositionsArray(label));
+	}*/
 
-	glfwSwapBuffers(window);
 	// Draw the contour
 	srand(glfwGetTime());
 	renderContour(false, contour, GL_LINE_STRIP);
-	/*glfwSwapBuffers(window);
-	glfwSwapBuffers(window);*/
 
 	// Render labels
 	/*glm::mat4 mvp(1.f);
@@ -217,19 +257,15 @@ int main() {
 	mvp = glm::rotate(mvp, static_cast<GLfloat>(15. * M_PI / 180.), glm::vec3(0.f, 0.f, 1.f));
 	Labeler::LabelCharacter labelChar(.05f, .1f);
 	for (int i = 0; i < 4; i++) {
-		glm::vec4 transformedPoint = mvp* glm::vec4(labelChar.points[i].x, labelChar.points[i].y, 0.f, 1.f);
-		labelChar.points[i] = Point{transformedPoint.x, transformedPoint.y};
+	glm::vec4 transformedPoint = mvp* glm::vec4(labelChar.points[i].x, labelChar.points[i].y, 0.f, 1.f);
+	labelChar.points[i] = Point{transformedPoint.x, transformedPoint.y};
 	}*/
 
 	// May crash because of the case described in findCandidatePositions TODO
 	// Draw candidate positions
-	renderContour(true, candidatePositions, GL_LINE_STRIP);
-	glfwSwapBuffers(window);
+	renderContour(true, finalCandidatePositions, GL_LINE_STRIP);
 	//glfwSwapBuffers(window);
-
-	system("pause");
-	glfwTerminate();
-	return 666;
+	//glfwSwapBuffers(window);
 }
 
 /*

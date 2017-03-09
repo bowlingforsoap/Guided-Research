@@ -80,7 +80,7 @@ public:
 
 			for (int i = 1; i < 4; i++)
 			{
-				// Normalization not needed if only boolean result is required.
+				// Normalization not needed if only boolean candidate is required.
 				GLfloat temp = glm::dot(glm::vec2(axis.x, axis.y), glm::vec2(points[i].x, points[i].y));
 
 				if (temp > p.max)
@@ -144,7 +144,8 @@ public:
 		vector<LabelCharacter> chars;
 		bool straight;
 
-		Label() = delete;
+		Label() = default;
+
 		// Constructs a label of numChars characters with the given charWidth and charHeight.
 		Label(const int& numChars, const GLfloat& charWidth, const GLfloat& charHeight) {
 			this->charWidth = charWidth;
@@ -153,7 +154,7 @@ public:
 			straight = false;
 		}
 
-		GLfloat getTotalWidth() {
+		GLfloat getTotalWidth() const {
 			return charWidth * chars.size();
 		}
 
@@ -183,11 +184,11 @@ public:
 	// Debug
 	static vector<Label> overlappingLabels;
 	// Conducts an intersection test between the Labels that were already added to the scene and a new one. Returns true if newLabel intersects with the any of the added ones; false - otherwise.
-	static bool intersect(const vector<Label>& addedLabels, const int& numLabelesAdded, Label newLabel) {
+	static bool intersect(const vector<Label>& addedLabels, Label newLabel) {
 		vector<OrientedBoundingBox> newLabelOBBs = newLabel.getOBBs();
 
-		for (int i = 0; i < numLabelesAdded; i++) {
-			vector<OrientedBoundingBox> addedLabelOBBs = addedLabels[i].getOBBs();
+		for (const Label& addedLabel : addedLabels) {
+			vector<OrientedBoundingBox> addedLabelOBBs = addedLabel.getOBBs();
 
 			for (OrientedBoundingBox newLabelOBB : newLabelOBBs) {
 				for (OrientedBoundingBox addedLabelOBB : addedLabelOBBs) {
@@ -198,7 +199,7 @@ public:
 					//glfwSwapBuffers(window);
 
 					if (newLabelOBB.intersects(addedLabelOBB)) {
-						overlappingLabels.push_back(newLabel); // Debug
+						//overlappingLabels.push_back(newLabel); // Debug
 						return true;
 					}
 				}
@@ -276,7 +277,7 @@ public:
 	}
 
 	// Looks for a candidate position for a contourLine. Tries to find a point sequence, which comprises a broken line with minimal curvature and is at least labelLength long.
-	static CandidatePosition findCandidatePositions(const GLfloat& labelLength, const GLfloat& labelHeight, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
+	static vector<CandidatePosition> findCandidatePositions(const GLfloat& labelLength, const GLfloat& labelHeight, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
 		if (angles[angles.size() - 1] == dummyValue || angles[0] == dummyValue) {
 			return findCandidatePositionsForOpenedContour(labelLength, labelHeight, contourLine, angles);
 		}
@@ -371,47 +372,54 @@ private:
 		return (i == 0) ? n - 1 : i - 1;
 	}
 
-	static CandidatePosition candidatePositionForShortContourLine(/*const CandidatePosition& candidatePosition,*/ const GLfloat& labelLength, const GLfloat& labelHeight, const vector<Point>& contourLine) {
-		CandidatePosition result;
+	static vector<CandidatePosition> candidatePositionForShortContourLine(/*const CandidatePosition& candidatePosition,*/ const GLfloat& labelLength, const GLfloat& labelHeight, const vector<Point>& contourLine) {
+		vector<CandidatePosition> candidates;
 		Point start;
 
-		Point labelPoint = contourLine[0];
-		// Decide top or bottom
-		if (labelPoint.y >= 0.f) {
-			start.y = labelPoint.y - labelHeight / 2.f;
-		}
-		else {
-			start.y = labelPoint.y + labelHeight / 2.f;
-		}
-		// Decide left or right
-		if (labelPoint.x >= 0.f) {
-			start.x = labelPoint.x - labelLength;
-		}
-		else {
-			start.x = labelPoint.x;
+		for (Point labelPoint : contourLine)
+		{
+			CandidatePosition candidate;
+
+			// Decide top or bottom
+			if (labelPoint.y >= 0.f) {
+				start.y = labelPoint.y - labelHeight / 2.f;
+			}
+			else {
+				start.y = labelPoint.y + labelHeight / 2.f;
+			}
+			// Decide left or right
+			if (labelPoint.x >= 0.f) {
+				start.x = labelPoint.x - labelLength;
+			}
+			else {
+				start.x = labelPoint.x;
+			}
+
+			candidate.curvature = 0.f;
+			candidate.length = labelLength;
+			candidate.position.push_back(start);
+			candidate.position.push_back(Point{ start.x + labelLength, start.y });
+			candidate.straight = true;
+
+			candidates.push_back(candidate);
 		}
 
-		result.curvature = 0.f;
-		result.length = labelLength;
-		result.position.push_back(start);
-		result.position.push_back(Point{ start.x + labelLength, start.y });
-		result.straight = true;
-
-		return result;
+		return candidates;
 	}
 
-	static CandidatePosition findCandidatePositionsForOpenedContour(const GLfloat& labelLength, const GLfloat& labelHeight, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
+	static vector<CandidatePosition> findCandidatePositionsForOpenedContour(const GLfloat& labelLength, const GLfloat& labelHeight, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
+		vector<CandidatePosition> candidatePositions;
 		CandidatePosition candidatePosition;
 
 		// Check if contourLine is long enough to fit a label labelLength long.
 		candidatePosition = contourLineToCandidatePosition(contourLine, angles);
 		if (candidatePosition.length < labelLength) {
-			candidatePosition = candidatePositionForShortContourLine(labelLength, labelHeight, contourLine);
-			return candidatePosition;
+			candidatePositions = candidatePositionForShortContourLine(labelLength, labelHeight, contourLine);
+			return candidatePositions;
 		}
 
-		candidatePosition.curvature = numeric_limits<float>::max();
-		candidatePosition.length = 0.f;
+		/*candidatePosition.curvature = numeric_limits<float>::max();
+		candidatePosition.length = 0.f;*/
 
 		int n = contourLine.size();
 		for (int i = 0; i < n - 1; i++) {
@@ -444,9 +452,10 @@ private:
 				}
 
 				if (currentCandidate.length >= labelLength) {
-					if (currentCandidate.curvature < candidatePosition.curvature) {
+					candidatePositions.push_back(candidatePosition);
+					/*if (currentCandidate.curvature < candidatePosition.curvature) {
 						candidatePosition = currentCandidate;
-					}
+					}*/
 					break;
 				}
 				else if (boundaryPoint) {
@@ -458,21 +467,22 @@ private:
 
 		}
 
-		return candidatePosition;
+		return candidatePositions;
 	}
 
-	static CandidatePosition findCandidatePositionsForClosedContour(const GLfloat& labelLength, const GLfloat& labelHeight, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
+	static vector<CandidatePosition> findCandidatePositionsForClosedContour(const GLfloat& labelLength, const GLfloat& labelHeight, const vector<Point>& contourLine, const vector<GLfloat>& angles) {
+		vector<CandidatePosition> candidatePositions;
 		CandidatePosition candidatePosition;
 
 		// Check if contourLine is long enough to fit a label labelLength long.
 		candidatePosition = contourLineToCandidatePosition(contourLine, angles);
 		if (candidatePosition.length < labelLength) {
-			candidatePosition = candidatePositionForShortContourLine(labelLength, labelHeight, contourLine);
-			return candidatePosition;
+			candidatePositions = candidatePositionForShortContourLine(labelLength, labelHeight, contourLine);
+			return candidatePositions;
 		}
 
-		candidatePosition.curvature = numeric_limits<float>::max();
-		candidatePosition.length = 0.f;
+		/*candidatePosition.curvature = numeric_limits<float>::max();
+		candidatePosition.length = 0.f;*/
 		int n = contourLine.size();
 
 		for (int i = 0; i < n; i++) {
@@ -497,9 +507,10 @@ private:
 				currentCandidate.curvature += angles[prevLoopedIndex(j, n)];
 
 				if (currentCandidate.length >= labelLength) {
-					if (currentCandidate.curvature < candidatePosition.curvature) {
+					candidatePositions.push_back(currentCandidate);
+					/*if (currentCandidate.curvature < candidatePosition.curvature) {
 						candidatePosition = currentCandidate;
-					}
+					}*/
 					break;
 				}
 
@@ -508,7 +519,7 @@ private:
 			}
 		}
 
-		return candidatePosition;
+		return candidatePositions;
 	}
 
 	// TODO: can be made more efficient (i.e. do this when reconstruction a contourLine in contourer)

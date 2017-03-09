@@ -127,6 +127,7 @@
     <ClInclude Include="contourer.h" />
     <ClInclude Include="labeler.h" />
     <ClInclude Include="line.h" />
+    <ClInclude Include="main.h" />
     <ClInclude Include="meausrement.h" />
     <ClInclude Include="point.h" />
     <ClInclude Include="renderer.h" />
