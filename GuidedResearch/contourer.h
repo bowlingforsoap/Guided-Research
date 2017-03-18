@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "line.h"
+#include "renderer.h"
 
 using namespace std;
 
@@ -55,7 +56,7 @@ vector<vector<Point>> getContour(GLfloat(&feedback)[rows][cols], const GLint& fi
 				if (contourLine.size() >= 2)
 				{
 					contour.push_back(contourLine);
-					contourLine.clear(); // TODO: check if causes trouble
+					contourLine.clear();
 				}
 			}
 		}
@@ -78,7 +79,6 @@ vector<vector<Point>> getContour(GLfloat(&feedback)[rows][cols], const GLint& fi
 template <size_t rows, size_t cols>
 void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& contourLine, GLfloat(&feedback)[rows][cols], const int& i, const int& j, const Line& dummyLine, const GLint& fieldWidth)
 {
-	// TODO: important! only delete the processed line, not the whole square!! otherwise an unprocessed line might get deleted.
 	// Clear the data for the current square
 	feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j] = dummyLine.begin.x;
 	feedback[i + lineSegmentNumberInSquare * 2 * fieldWidth][j + 1] = dummyLine.begin.y;
@@ -195,9 +195,9 @@ void traceContour(Line& currLine, int lineSegmentNumberInSquare, vector<Point>& 
 // Definition.
 inline bool connectedLines(Line& currLine, Line& compareLine, const Line& dummyLine, vector<Point>& contourLine)
 {
-	if (currLine.end == compareLine.begin && currLine.begin == compareLine.end) {
+	/*if (currLine.end == compareLine.begin && currLine.begin == compareLine.end) {
 		cout << "break\n";
-	}
+	}*/
 
 	if (currLine.end == compareLine.begin)
 	{

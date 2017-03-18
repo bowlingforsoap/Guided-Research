@@ -192,14 +192,7 @@ public:
 
 			for (OrientedBoundingBox newLabelOBB : newLabelOBBs) {
 				for (OrientedBoundingBox addedLabelOBB : addedLabelOBBs) {
-					//glfwSwapBuffers(window);
-					////glClear(GL_COLOR_BUFFER_BIT);
-					//render2Dsmth(newLabelOBB.points, 4, GL_TRIANGLE_STRIP, glm::vec3(0.f, 1.f, 0.f));
-					//render2Dsmth(addedLabelOBB.points, 4, GL_TRIANGLE_STRIP, glm::vec3(1.f, 0.f, 0.f));
-					//glfwSwapBuffers(window);
-
 					if (newLabelOBB.intersects(addedLabelOBB)) {
-						//overlappingLabels.push_back(newLabel); // Debug
 						return true;
 					}
 				}
@@ -526,7 +519,7 @@ private:
 	// Makes sure the contourLine is long enough to fit contour.
 	static CandidatePosition contourLineToCandidatePosition(const vector<Point>& contourLine, const vector<GLfloat>& angles) {
 		CandidatePosition candidatePosition;
-		candidatePosition.position = contourLine; // is this necessary?
+		candidatePosition.position = contourLine; // TODO: is this necessary?
 		candidatePosition.length = 0.f;
 		candidatePosition.curvature = 0.f;
 
