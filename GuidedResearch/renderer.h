@@ -46,6 +46,7 @@ public:
 		glGenBuffers(1, &VBO);
 		glGenVertexArrays(1, &VAO);*/
 		glm::vec3 colors(1.f, 1.f, 1.f);
+		srand(glfwGetTime());
 		for (int i = 0; i < contour.size(); i++)
 		{
 			//cout << "contour[" << i << "].size(): " << contour[i].size() << endl;
@@ -164,7 +165,6 @@ public:
 		inline glm::vec3 genRandColor() {
 			glm::vec3 colors;
 
-			srand(glfwGetTime());
 			colors[0] = rand() / (GLfloat)RAND_MAX;
 			colors[1] = rand() / (GLfloat)RAND_MAX;
 			colors[2] = rand() / (GLfloat)RAND_MAX;

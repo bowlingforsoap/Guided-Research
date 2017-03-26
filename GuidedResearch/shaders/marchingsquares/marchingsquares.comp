@@ -27,13 +27,6 @@
 		imageStore(contour, ivec3(gl_GlobalInvocationID.xy, vertexIndex), vec4(vertex_NDCposition.xy, 0.f, 0.f));
 	}
 
-	void emitDebug(vec2 value) {
-		imageStore(contour, ivec3(gl_GlobalInvocationID.xy, 0), vec4(value.x, value.y, 0.f, 0.f));
-		imageStore(contour, ivec3(gl_GlobalInvocationID.xy, 1), vec4(value.x, value.y, 0.f, 0.f));
-		imageStore(contour, ivec3(gl_GlobalInvocationID.xy, 2), vec4(value.x, value.y, 0.f, 0.f));
-		imageStore(contour, ivec3(gl_GlobalInvocationID.xy, 3), vec4(value.x, value.y, 0.f, 0.f));
-	}
-
 	/*
 	Emits a line segment for the contour defined by isoValue.
 	See variables description in main().
