@@ -50,17 +50,17 @@ void readImageContents(const GLuint& contourTex, GLfloat(&contourTexData)[cols][
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 }
 
-const GLint fieldWidth = 10;
-const GLint fieldHeight = 100;
+const GLint fieldWidth = 200;
+const GLint fieldHeight = 200;
 // Value we'd need to use after retrieving the image from OpenGL (column-major) to C++ (row-major).
 const GLint fieldWidthPerm = fieldHeight;
 // Value we'd need to use after retrieving the image from OpenGL (column-major) to C++ (row-major).
 const GLint fieldHeightPerm = fieldWidth;
 // Left and right domain boundaries
-const glm::vec2 xDomain(-.5f, 3.5f);
-const glm::vec2 yDomain(-2.f, 2.f);
-//const glm::vec2 xDomain(-8.f, 8.f);
-//const glm::vec2 yDomain(-3.f, 3.f);
+//const glm::vec2 xDomain(-.5f, 3.5f);
+//const glm::vec2 yDomain(-2.f, 2.f);
+const glm::vec2 xDomain(-8.f, 8.f);
+const glm::vec2 yDomain(-3.f, 3.f);
 vector<Labeler::Label> addedLabels;
 
 void produceLabeledContour(const int& numChars, const GLfloat& charWidth, const GLfloat& charHeight, GLfloat isoValue, const GLuint &computeProgram, const GLuint& contourTex, GLFWwindow * window, Renderer& renderer)
@@ -114,6 +114,7 @@ void produceLabeledContour(const int& numChars, const GLfloat& charWidth, const 
 		// Sort by ascending curvature
 		std::sort(candidatePositions.begin(), candidatePositions.end(), [](const Labeler::CandidatePosition& a, const Labeler::CandidatePosition& b) {return a.curvature < b.curvature; });
 
+		// TODO: extract into a separate method
 		bool candidatePositionWasFound = false;
 		Labeler::Label positionedLabel;
 		// For every candidatePosition
@@ -123,8 +124,11 @@ void produceLabeledContour(const int& numChars, const GLfloat& charWidth, const 
 			positionedLabel.straight = candidatePosition.straight;
 			Labeler::positionLabelOnLine(positionedLabel, candidatePosition.position);
 
+			// Get ready for pre-culling
+			positionedLabel.determineAABB(); // TODO: this method should not be accessible by users			
+
 			// Check for intersections
-			if (!Labeler::intersect(addedLabels, positionedLabel)) {
+			if (!Labeler::intersect(addedLabels, positionedLabel, renderer)) {
 				candidatePositionWasFound = true;
 
 				// ~Debug
@@ -260,18 +264,18 @@ int main() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	Renderer renderer;
-	
+
 	measure_start(1)
 	produceLabeledContour(5, .05f, .1f, .5f, computeProgram, contourTex, window, renderer);
-	//produceLabeledContour(4, .05f, .1f, .4f, computeProgram, contourTex, window, renderer);
-	//produceLabeledContour(5, .05f, .1f, .9f, computeProgram, contourTex, window, renderer);
+	produceLabeledContour(4, .05f, .1f, .4f, computeProgram, contourTex, window, renderer);
+	produceLabeledContour(5, .05f, .1f, .9f, computeProgram, contourTex, window, renderer);
 	measure_end
-	/*glfwSwapBuffers(window);
-	glfwSwapBuffers(window);*/
+		/*glfwSwapBuffers(window);
+		glfwSwapBuffers(window);*/
 
-	for (Labeler::Label label : addedLabels) {
-		renderer.renderLabel(Labeler::labelToPositionsArray(label));
-	}
+		for (Labeler::Label label : addedLabels) {
+			renderer.renderLabel(Labeler::labelToPositionsArray(label));
+		}
 	glfwSwapBuffers(window);
 
 	system("pause");

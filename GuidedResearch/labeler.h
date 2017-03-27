@@ -48,6 +48,8 @@ public:
 		// Points go clockwise in 'z' shape starting from top left point.
 		Point points[4];
 
+		OrientedBoundingBox() = default;
+
 		OrientedBoundingBox(Point p1, Point p2, Point p3, Point p4) {
 			points[0] = p1;
 			points[1] = p2;
@@ -107,7 +109,7 @@ public:
 				Projection p1 = this->project(axis);
 				Projection p2 = obb.project(axis);
 
-				if (!p1.overlaps(p2)) { 
+				if (!p1.overlaps(p2)) {
 					return false;
 				}
 			}
@@ -124,7 +126,7 @@ public:
 			return true;
 		}
 	};
-	
+
 	// Represents a single character in a Label.
 	struct LabelCharacter {
 		OrientedBoundingBox obb;
@@ -137,12 +139,27 @@ public:
 		}
 	};
 
+	// An axis-aligned bounding box for the whole Label.
+	struct AxisAlignedBoundingBox {
+		GLfloat left, right, top, bottom;
+
+		AxisAlignedBoundingBox() : left(dummyValue), right(-dummyValue), top(-dummyValue), bottom(dummyValue) {}
+
+		bool intersects(const AxisAlignedBoundingBox& aabb) {
+			return !(right < aabb.left ||
+				left > aabb.right ||
+				top < aabb.bottom ||
+				bottom > aabb.top);
+		}
+	};
+
 	// Reresents one label.
 	struct Label {
 		GLfloat charWidth;
 		GLfloat charHeight;
 		vector<LabelCharacter> chars;
 		bool straight;
+		AxisAlignedBoundingBox aabb;
 
 		Label() = default;
 
@@ -166,7 +183,7 @@ public:
 				LabelCharacter firstChar = chars[0];
 				LabelCharacter lastChar = chars[chars.size() - 1];
 				obbs.push_back(OrientedBoundingBox{
-					Point{firstChar.obb.points[0]}, Point{ lastChar.obb.points[1]}, 
+					Point{firstChar.obb.points[0]}, Point{ lastChar.obb.points[1]},
 					Point{ firstChar.obb.points[2]}, Point{ lastChar.obb.points[3] }
 				});
 			}
@@ -179,19 +196,86 @@ public:
 
 			return obbs;
 		}
+
+		// Determines enclosing AABB for LabelCharacters.
+		void determineAABB() {
+			OrientedBoundingBox obb;
+
+			if (straight) {
+				obb = getOBBs()[0];
+				aabb.left = obb.points[0].x;
+				aabb.top = obb.points[0].y;
+				aabb.right = obb.points[3].x;
+				aabb.bottom = obb.points[3].y;
+			}
+			else {
+				for (LabelCharacter labelChar : chars) {
+					obb = labelChar.obb;
+					for (Point point : obb.points) {
+						if (point.x > aabb.right) {
+							aabb.right = point.x;
+						}
+
+						if (point.x < aabb.left) {
+							aabb.left = point.x;
+						}
+
+						if (point.y > aabb.top) {
+							aabb.top = point.y;
+						}
+
+						if (point.y < aabb.bottom) {
+							aabb.bottom = point.y;
+						}
+					}
+				}
+			}
+		}
 	};
 
 	// Debug
 	static vector<Label> overlappingLabels;
 	// Conducts an intersection test between the Labels that were already added to the scene and a new one. Returns true if newLabel intersects with the any of the added ones; false - otherwise.
-	static bool intersect(const vector<Label>& addedLabels, Label newLabel) {
+	static bool intersect(const vector<Label>& addedLabels, Label newLabel, Renderer& renderer) {
 		vector<OrientedBoundingBox> newLabelOBBs = newLabel.getOBBs();
 
-		for (const Label& addedLabel : addedLabels) {
-			vector<OrientedBoundingBox> addedLabelOBBs = addedLabel.getOBBs();
+		/*glfwSwapBuffers(window);
+		glClearColor(0.f, 0.f, 0.f, 1.f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		Point aabbPoints[]{
+			Point{ newLabel.aabb.left, newLabel.aabb.top },
+			Point{ newLabel.aabb.right, newLabel.aabb.top },
+			Point{ newLabel.aabb.left, newLabel.aabb.bottom },
+			Point{ newLabel.aabb.right, newLabel.aabb.bottom }
+		};
+		renderer.render2Dsmth(aabbPoints, 4, GL_TRIANGLE_STRIP, true);
+		glfwSwapBuffers(window);
+		glfwSwapBuffers(window);
+		renderer.renderLabel(Labeler::labelToPositionsArray(newLabel));
+		glfwSwapBuffers(window);*/
 
-			for (OrientedBoundingBox newLabelOBB : newLabelOBBs) {
-				for (OrientedBoundingBox addedLabelOBB : addedLabelOBBs) {
+		for (const Label& addedLabel : addedLabels) {
+			/*glfwSwapBuffers(window);
+			Point aabbPoints[]{
+				Point{ addedLabel.aabb.left, addedLabel.aabb.top },
+				Point{ addedLabel.aabb.right, addedLabel.aabb.top },
+				Point{ addedLabel.aabb.left, addedLabel.aabb.bottom },
+				Point{ addedLabel.aabb.right, addedLabel.aabb.bottom }
+			};
+			renderer.render2Dsmth(aabbPoints, 4, GL_TRIANGLE_STRIP, true);
+			glfwSwapBuffers(window);
+			glfwSwapBuffers(window);
+			renderer.renderLabel(Labeler::labelToPositionsArray(addedLabel));
+			glfwSwapBuffers(window);*/
+
+			// Pre-culling
+			if (preCull(newLabel, addedLabel)) {
+				continue;
+			}
+
+			vector<OrientedBoundingBox> addedLabelOBBs = addedLabel.getOBBs();
+			for (const OrientedBoundingBox& newLabelOBB : newLabelOBBs) {
+				for (const OrientedBoundingBox& addedLabelOBB : addedLabelOBBs) {
 					if (newLabelOBB.intersects(addedLabelOBB)) {
 						return true;
 					}
@@ -201,6 +285,7 @@ public:
 
 		return false;
 	}
+
 
 	// Converts LabelChar's points in a Label into a continious array of positions to be rendered. 
 	static vector<Point> labelToPositionsArray(const Label& label) {
@@ -336,6 +421,14 @@ public:
 	}
 
 private:
+	// Returns true if newLabel was pre-culled with the already added labels (aka they do not intersect); false - otherwise.
+	inline static bool preCull(Label newLabel, Label addedLabel) {
+		if (newLabel.aabb.intersects(addedLabel.aabb)) {
+			return false;
+		}
+		return true;
+	}
+
 	// Computes distances from the beginning of the line to each of its points.
 	static vector<GLfloat> computeDistancesForLine(const vector<Point>& line) {
 		vector<GLfloat> distances;
