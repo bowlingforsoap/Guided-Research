@@ -43,6 +43,12 @@ public:
 		}
 	};
 
+	// An abstraction over 2 axes.
+	struct Axes {
+		Point axis1;
+		Point axis2;
+	};
+
 	// A bounding box (rectangle) for a LabelCharacter.
 	struct OrientedBoundingBox {
 		// Points go clockwise in 'z' shape starting from top left point.
@@ -67,10 +73,10 @@ public:
 			points[3] = { halfWidth, -halfHeight };
 		}
 
-		vector<Point> getAxes() const {
-			vector<Point> axes;
-			axes.push_back(points[0] - points[1]);
-			axes.push_back(points[0] - points[2]);
+		Axes getAxes() const {
+			Axes axes;
+			axes.axis1 = points[0] - points[1];
+			axes.axis2 = points[0] - points[2];
 			return axes;
 		}
 
@@ -102,21 +108,21 @@ public:
 
 		// Checks if this OBB intersects obb.
 		bool intersects(const OrientedBoundingBox& obb) const {
-			vector<Point> axes1 = getAxes();
-			vector<Point> axes2 = obb.getAxes();
+			Axes axes1 = getAxes();
+			Axes axes2 = obb.getAxes();
 
-			for (const Point& axis : axes1) {
-				Projection p1 = this->project(axis);
-				Projection p2 = obb.project(axis);
+			for (int i = 0; i < 2; i++) {
+				Projection p1 = this->project(*(&axes1.axis1 + i));
+				Projection p2 = obb.project(*(&axes1.axis1 + i));
 
 				if (!p1.overlaps(p2)) {
 					return false;
 				}
 			}
 
-			for (const Point& axis : axes2) {
-				Projection p1 = this->project(axis);
-				Projection p2 = obb.project(axis);
+			for (int i = 0; i < 2; i++) {
+				Projection p1 = this->project(*(&axes2.axis1 + i));
+				Projection p2 = obb.project(*(&axes2.axis1 + i));
 
 				if (!p1.overlaps(p2)) {
 					return false;
@@ -239,35 +245,7 @@ public:
 	static bool intersect(const vector<Label>& addedLabels, Label newLabel, Renderer& renderer) {
 		vector<OrientedBoundingBox> newLabelOBBs = newLabel.getOBBs();
 
-		/*glfwSwapBuffers(window);
-		glClearColor(0.f, 0.f, 0.f, 1.f);
-		glClear(GL_COLOR_BUFFER_BIT);
-		Point aabbPoints[]{
-			Point{ newLabel.aabb.left, newLabel.aabb.top },
-			Point{ newLabel.aabb.right, newLabel.aabb.top },
-			Point{ newLabel.aabb.left, newLabel.aabb.bottom },
-			Point{ newLabel.aabb.right, newLabel.aabb.bottom }
-		};
-		renderer.render2Dsmth(aabbPoints, 4, GL_TRIANGLE_STRIP, true);
-		glfwSwapBuffers(window);
-		glfwSwapBuffers(window);
-		renderer.renderLabel(Labeler::labelToPositionsArray(newLabel));
-		glfwSwapBuffers(window);*/
-
 		for (const Label& addedLabel : addedLabels) {
-			/*glfwSwapBuffers(window);
-			Point aabbPoints[]{
-				Point{ addedLabel.aabb.left, addedLabel.aabb.top },
-				Point{ addedLabel.aabb.right, addedLabel.aabb.top },
-				Point{ addedLabel.aabb.left, addedLabel.aabb.bottom },
-				Point{ addedLabel.aabb.right, addedLabel.aabb.bottom }
-			};
-			renderer.render2Dsmth(aabbPoints, 4, GL_TRIANGLE_STRIP, true);
-			glfwSwapBuffers(window);
-			glfwSwapBuffers(window);
-			renderer.renderLabel(Labeler::labelToPositionsArray(addedLabel));
-			glfwSwapBuffers(window);*/
-
 			// Pre-culling
 			if (preCull(newLabel, addedLabel)) {
 				continue;
@@ -432,6 +410,7 @@ private:
 	// Computes distances from the beginning of the line to each of its points.
 	static vector<GLfloat> computeDistancesForLine(const vector<Point>& line) {
 		vector<GLfloat> distances;
+		distances.reserve(line.size());
 		distances.push_back(0.f);
 
 		GLfloat prevDistance = 0;

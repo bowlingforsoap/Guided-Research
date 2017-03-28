@@ -29,29 +29,11 @@ void readImageContents(const GLuint& contourTex, GLfloat(&contourTexData)[cols][
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
 	glGetTexImage(GL_TEXTURE_2D_ARRAY, 0, GL_RG, GL_FLOAT, contourTexData);
-	//cout << "contourTexData: \n";
-	//for (int i = 0; i < rows; ++i)
-	//{
-	//	/*if (i % 5 == 0)
-	//	{
-	//		cout << '\n';
-	//	}*/
-
-	//	for (int j = 0; j < cols; j = j + 2)
-	//	{
-	//		{
-	//			if (contourTexData[i][j] != dummyValue && contourTexData[i][j + 1] != dummyValue && contourTexData[i][j] > 1.f && contourTexData[i][j] < -1.f && contourTexData[i][j + 1] > 1.f && contourTexData[i][j + 1] < -1.f)
-	//				cout << "(" << contourTexData[i][j] << ", " << contourTexData[i][j + 1] << "), ";
-	//		}
-	//	}
-	//	//cout << '\n';
-	//}
-	//cout << "." << endl;
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 }
 
-const GLint fieldWidth = 200;
-const GLint fieldHeight = 200;
+const GLint fieldWidth = 100;
+const GLint fieldHeight = 100;
 // Value we'd need to use after retrieving the image from OpenGL (column-major) to C++ (row-major).
 const GLint fieldWidthPerm = fieldHeight;
 // Value we'd need to use after retrieving the image from OpenGL (column-major) to C++ (row-major).
@@ -151,25 +133,6 @@ void produceLabeledContour(const int& numChars, const GLfloat& charWidth, const 
 			addedLabels.push_back(positionedLabel);
 		}
 	}
-
-	// Turn off wireframe mode
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-	// Debug
-	// Render the overlapping contours
-	/*for (Labeler::Label label : Labeler::overlappingLabels) {
-	renderLabel(Labeler::labelToPositionsArray(label));
-	}*/
-
-	/*cout << "debug (glm::vec2(10.f, 5.f) / glm::vec2(20.f, 20.f) - .5f)*2.f: " << ((glm::vec2(10.f, 5.f) / glm::vec2(20.f, 20.f) - .5f)*2.f).x << ", " << ((glm::vec2(10.f, 5.f) / glm::vec2(20.f, 20.f) - .5f)*2.f).y;
-	glfwSwapBuffers(window);
-	glfwSwapBuffers(window);*/
-
-	// May crash because of the case described in findCandidatePositions TODO
-	// Draw candidate positions
-	//renderer.renderContour(true, finalCandidatePositions, GL_LINE_STRIP);
-	//glfwSwapBuffers(window);
-	//glfwSwapBuffers(window);
 }
 
 int main() {
@@ -211,26 +174,6 @@ int main() {
 	generateScalarField(scalarField, fieldWidthPerm, fieldHeightPerm, xDomain.x, yDomain.x, xDomain.y, yDomain.y, fieldCoords, fieldCoordsSize);
 	//generateScalarField(scalarField, fieldWidth, fieldHeight, -8, -3, 8, 3, fieldCoords, fieldCoordsSize);
 
-	// Check scalar field coords
-	/*cout << "\nScalar field:" << endl;
-	for (int i = 0; i < 20; i++) {
-		cout << scalarField[i] << ", ";
-	}
-	cout << endl;
-	cout << "\nScalar field end:" << endl;
-	for (int i = fieldWidth * fieldHeight - 1; i > (fieldWidth * fieldHeight - 1) - 20; i--) {
-		cout << scalarField[i] << ", ";
-	}
-	cout << endl << "\nField coords:" << endl;
-	for (int i = 0; i < 20; i++) {
-		cout << fieldCoords[i] << ", ";
-	}
-	cout << endl;
-	cout << "\nField coords end:" << endl;
-	for (int i = fieldCoordsSize - 1; i > fieldCoordsSize - 20; i--) {
-		cout << fieldCoords[i] << ", ";
-	}*/
-
 	// Store scalar field into a texture
 	glActiveTexture(GL_TEXTURE0);
 	GLuint scalarFieldTex;
@@ -266,6 +209,8 @@ int main() {
 	Renderer renderer;
 
 	measure_start(1)
+	//produceLabeledContour(5, .05f, .1f, .7f, computeProgram, contourTex, window, renderer);
+	//produceLabeledContour(5, .05f, .1f, .6f, computeProgram, contourTex, window, renderer);
 	produceLabeledContour(5, .05f, .1f, .5f, computeProgram, contourTex, window, renderer);
 	produceLabeledContour(4, .05f, .1f, .4f, computeProgram, contourTex, window, renderer);
 	produceLabeledContour(5, .05f, .1f, .9f, computeProgram, contourTex, window, renderer);
@@ -278,7 +223,7 @@ int main() {
 		}
 	glfwSwapBuffers(window);
 
-	system("pause");
+	//system("pause");
 	glfwTerminate();
 	return 666;
 }
