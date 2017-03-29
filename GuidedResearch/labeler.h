@@ -19,8 +19,6 @@ using namespace std;
 // TODO: revise what to leave public and what to incapsulate.
 class Labeler {
 public:
-	static GLFWwindow* window; // debug
-
 	struct CandidatePosition {
 		GLfloat curvature;
 		GLfloat length;
@@ -239,8 +237,6 @@ public:
 		}
 	};
 
-	// Debug
-	static vector<Label> overlappingLabels;
 	// Conducts an intersection test between the Labels that were already added to the scene and a new one. Returns true if newLabel intersects with the any of the added ones; false - otherwise.
 	static bool intersect(const vector<Label>& addedLabels, Label newLabel, Renderer& renderer) {
 		vector<OrientedBoundingBox> newLabelOBBs = newLabel.getOBBs();

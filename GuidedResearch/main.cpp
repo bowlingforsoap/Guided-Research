@@ -16,13 +16,10 @@ scalarField:[[minX, maxX], [minY, maxY]]
 fieldCoords:[[0, width - 2], [0, height - 2]]
 */
 // Generates scalar field (which can be placed in a texture) and texture coordinates for it.
-inline void generateScalarField(GLfloat* &scalarField, GLint charWidth, GLint charHeight, GLfloat minX, GLfloat minY, GLfloat maxX, GLfloat maxY, GLint* &fieldCoords, GLint &fieldCoordsSize);
+inline void generateScalarField(GLfloat* &scalarField, GLint charWidth, GLint charHeight, GLfloat minX, GLfloat minY, GLfloat maxX, GLfloat maxY);
 
 // Print contents of currently bound GL_TRANSFORM_FEEDBACK_BUFFER as GLfloat.
 inline void printBufferContents(int buffer, GLintptr offset, GLsizei length);
-
-vector<Labeler::Label> Labeler::overlappingLabels; // Debug
-GLFWwindow* Labeler::window;
 
 template<size_t cols, size_t rows>
 void readImageContents(const GLuint& contourTex, GLfloat(&contourTexData)[cols][rows], const GLfloat& dummyValue) {
@@ -32,8 +29,8 @@ void readImageContents(const GLuint& contourTex, GLfloat(&contourTexData)[cols][
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 }
 
-const GLint fieldWidth = 100;
-const GLint fieldHeight = 100;
+const GLint fieldWidth = 1000;
+const GLint fieldHeight = 1000;
 // Value we'd need to use after retrieving the image from OpenGL (column-major) to C++ (row-major).
 const GLint fieldWidthPerm = fieldHeight;
 // Value we'd need to use after retrieving the image from OpenGL (column-major) to C++ (row-major).
@@ -44,6 +41,8 @@ const GLint fieldHeightPerm = fieldWidth;
 const glm::vec2 xDomain(-8.f, 8.f);
 const glm::vec2 yDomain(-3.f, 3.f);
 vector<Labeler::Label> addedLabels;
+
+Contourer contourer(fieldWidthPerm, fieldHeightPerm);
 
 void produceLabeledContour(const int& numChars, const GLfloat& charWidth, const GLfloat& charHeight, GLfloat isoValue, const GLuint &computeProgram, const GLuint& contourTex, GLFWwindow * window, Renderer& renderer)
 {
@@ -61,24 +60,27 @@ void produceLabeledContour(const int& numChars, const GLfloat& charWidth, const 
 	// COMPUTER SHADER
 	glDispatchCompute(fieldWidth - 1, fieldHeight - 1, 1);
 	// Ensure that writes by the compute shader have completed
-	//glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
-	glMemoryBarrier(GL_ALL_BARRIER_BITS);
+	glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
 
 	// Read back the 2D array texture
-	GLfloat contourTexData[fieldWidthPerm * 4][fieldHeightPerm * 2];
-	//cout << "sizeof(contourTexData): " << sizeof(contourTexData) << endl;
-	readImageContents(contourTex, contourTexData, dummyValue); // actually retrieves the image from OpenGL ¯\_(ツ)_/¯
+	vector<GLfloat> contourTexData((fieldWidthPerm * 4)*(fieldHeightPerm * 2)); // might be better to store on heap
+	//contourTexData.reserve((fieldWidthPerm * 4)*(fieldHeightPerm * 2));
+	/*cout << "sizeof(contourTexData): " << sizeof(contourTexData) << '\n'; // 12
+	cout << "sizeof(&contourTexData): " << sizeof(&contourTexData) << '\n';*/ // 4
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
+	glGetTexImage(GL_TEXTURE_2D_ARRAY, 0, GL_RG, GL_FLOAT, contourTexData.data());
+	glBindTexture(GL_TEXTURE_2D_ARRAY, 0); // actually retrieves the image from OpenGL ¯\_(ツ)_/¯
 
 	// Sort the primitives and retrieve the contour
-	vector<vector<Point>> contour = getContour(contourTexData, fieldWidthPerm, fieldHeightPerm);
+	vector<vector<Point>> contour = contourer.getContour(contourTexData);
 	// Draw the contour
 	srand(glfwGetTime());
 	renderer.renderContour(true, contour, GL_LINE_STRIP);
 
 	// Find candidate positions for the contour
 	vector<vector<GLfloat>> angles = Labeler::computeCurvatureAngles(contour);
-	vector<vector<Point>> finalCandidatePositions;
-	finalCandidatePositions.reserve(contour.size());
 	// Construct labels
 	const Labeler::Label label(numChars, charWidth, charHeight);
 	vector<Labeler::Label> labels(contour.size(), label);
@@ -88,11 +90,8 @@ void produceLabeledContour(const int& numChars, const GLfloat& charWidth, const 
 
 	// For each contourLine 
 	for (int i = 0; i < contour.size(); i++) {
-		// Find candidate positions
-		/*renderer.render2Dsmth(&contour[i][0], contour[i].size(), GL_LINE_STRIP, glm::vec3(.1f, 1.f, .1f));
-		glfwSwapBuffers(window);*/
+		// Find all(!) candidate positions. TODO: make a more sophisticated choice
 		vector<Labeler::CandidatePosition> candidatePositions = Labeler::findCandidatePositions(label.getTotalWidth(), label.charHeight, contour[i], angles[i]);
-		//glfwSwapBuffers(window);
 		// Sort by ascending curvature
 		std::sort(candidatePositions.begin(), candidatePositions.end(), [](const Labeler::CandidatePosition& a, const Labeler::CandidatePosition& b) {return a.curvature < b.curvature; });
 
@@ -113,9 +112,6 @@ void produceLabeledContour(const int& numChars, const GLfloat& charWidth, const 
 			if (!Labeler::intersect(addedLabels, positionedLabel, renderer)) {
 				candidatePositionWasFound = true;
 
-				// ~Debug
-				finalCandidatePositions.push_back(candidatePosition.position);
-
 				addedLabels.push_back(positionedLabel);
 
 				break;
@@ -126,10 +122,10 @@ void produceLabeledContour(const int& numChars, const GLfloat& charWidth, const 
 		}
 
 		// If all candidate positions intersect with something
-		if (!candidatePositionWasFound &&  candidatePositions.size() > 0 /*happens when debugging and writing smth into the contour image*/) {
+		if (!candidatePositionWasFound &&  candidatePositions.size() > 0 /*latter happens when debugging and writing smth into the contour image*/) {
+			// Choose the first candidate position. TODO: make more sophisticated choice.
 			positionedLabel = label;
 			Labeler::positionLabelOnLine(positionedLabel, candidatePositions[0].position);
-			finalCandidatePositions.push_back(candidatePositions[0].position);
 			addedLabels.push_back(positionedLabel);
 		}
 	}
@@ -138,7 +134,6 @@ void produceLabeledContour(const int& numChars, const GLfloat& charWidth, const 
 int main() {
 	GLint charWidth = 1500, charHeight = 1500;
 	GLFWwindow* window = glfwInitialize(charWidth, charHeight, "Guided Research", 4, 4, false);
-	Labeler::window = window;// debug
 	glewInit();
 	glViewport(0, 0, charWidth, charHeight);
 
@@ -157,21 +152,9 @@ int main() {
 	// Delete shader
 	glDeleteShader(computeShader);
 
-	// Check some OpenGL capabilities
-	GLint value;
-	glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &value);
-	cout << "MAX_COMPUTE_WORK_GROUP_INVOCATIONS: " << value << endl;
-	glGetIntegerv(GL_MAX_COMPUTE_SHARED_MEMORY_SIZE, &value);
-	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
-	glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &value);
-	cout << "GL_MAX_COMPUTE_SHARED_MEMORY_SIZE: " << value << endl;
-
 	// Scalar Field setup
-	// TODO: Issues when fieldWidth != fieldHeight. Maybe the same ol' problem, but contouring must have something to do with it too.
-	GLfloat* scalarField = nullptr;
-	GLint* fieldCoords = nullptr;
-	GLint fieldCoordsSize; // TODO: get rid of
-	generateScalarField(scalarField, fieldWidthPerm, fieldHeightPerm, xDomain.x, yDomain.x, xDomain.y, yDomain.y, fieldCoords, fieldCoordsSize);
+	GLfloat* scalarField = nullptr; // TODO: don't forget to remove in the end
+	generateScalarField(scalarField, fieldWidthPerm, fieldHeightPerm, xDomain.x, yDomain.x, xDomain.y, yDomain.y);
 	//generateScalarField(scalarField, fieldWidth, fieldHeight, -8, -3, 8, 3, fieldCoords, fieldCoordsSize);
 
 	// Store scalar field into a texture
@@ -182,9 +165,8 @@ int main() {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, fieldWidth, fieldHeight, 0, GL_RED, GL_FLOAT, scalarField);
 	glBindImageTexture(0, scalarFieldTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	//cout << glGetError() << endl;
 	GL_ERROR_CHECK;
-	//delete[] scalarField;
+	delete[] scalarField;
 
 	// Setup the output image for the texture
 	glActiveTexture(GL_TEXTURE1);
@@ -193,7 +175,6 @@ int main() {
 	glGenTextures(1, &contourTex);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
 	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RG32F, fieldWidth, fieldHeight, 4);
-	/*glClearTexImage(contourTex, 0, GL_RG, GL_FLOAT, &dummyArray[0]);*/
 	glBindImageTexture(1, contourTex, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RG32F);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
@@ -223,7 +204,7 @@ int main() {
 		}
 	glfwSwapBuffers(window);
 
-	//system("pause");
+	system("pause");
 	glfwTerminate();
 	return 666;
 }
@@ -235,7 +216,7 @@ scalarField:[[minX, maxX], [minY, maxY]]
 fieldCoords:[[0, width - 2], [0, height - 2]]
 */
 // Generates scalar field (which can be placed in a texture) and texture coordinates for it.
-void generateScalarField(GLfloat* &scalarField, GLint width, GLint height, GLfloat minX, GLfloat minY, GLfloat maxX, GLfloat maxY, GLint* &fieldCoords, GLint &fieldCoordsSize) {
+void generateScalarField(GLfloat* &scalarField, GLint width, GLint height, GLfloat minX, GLfloat minY, GLfloat maxX, GLfloat maxY) {
 	scalarField = new GLfloat[width * height];
 	float xDelta = abs(maxX - minX) / width;
 	float yDelta = abs(maxY - minY) / height;
@@ -248,16 +229,6 @@ void generateScalarField(GLfloat* &scalarField, GLint width, GLint height, GLflo
 				system("pause");
 			}
 		}
-	}
-
-	// Fill fieldCoords: coordinates of the upper left corner of each square in context of marching squares
-	fieldCoordsSize = (width - 1) * (height - 1) * 2;
-	fieldCoords = new GLint[fieldCoordsSize];
-	int i = 0;
-	while (i < (width - 1) * (height - 1)) {
-		fieldCoords[i * 2] = i / (height - 1);
-		fieldCoords[i * 2 + 1] = i % (height - 1);
-		i = i++;
 	}
 }
 

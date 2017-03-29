@@ -132,6 +132,7 @@
   <ItemGroup>
     <ClInclude Include="contourer.h" />
     <ClInclude Include="labeler.h" />
+    <ClInclude Include="labelingmanager.h" />
     <ClInclude Include="line.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="meausrement.h" />
