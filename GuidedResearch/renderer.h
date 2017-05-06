@@ -6,7 +6,7 @@
 #include <vector>
 #include <cstdlib>
 
-#include <util/Shader.h>
+#include "shader.h"
 
 #include "point.h"
 

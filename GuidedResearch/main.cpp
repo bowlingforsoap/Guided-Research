@@ -1,14 +1,11 @@
-﻿#include <util/GLFWinitializer.h>
-#include <util/Shader.h>
+﻿#include "GLFWinitializer.h"
+#include "shader.h"
 #include <SOIL.h>
 
 #include <iomanip>      // std::setprecision
 #include <algorithm>
 
 #include "labelingmanager.h"
-//#include "contourer.h"
-//#include "labeler.h"
-//#include "renderer.h"
 #include "meausrement.h"
 
 
@@ -20,38 +17,55 @@ fieldCoords:[[0, width - 2], [0, height - 2]]
 inline void generateScalarField(GLfloat* &scalarField, GLint charWidth, GLint charHeight, GLfloat minX, GLfloat minY, GLfloat maxX, GLfloat maxY);
 
 int main() {
-	GLint charWidth = 1500, charHeight = 1500;
-	GLFWwindow* window = glfwInitialize(charWidth, charHeight, "Guided Research", 4, 4, false);
+	// Window and GL setup
+	GLint windowWidth = 1500, windowHeight = 1500;
+	GLFWwindow* window = glfwInitialize(windowWidth, windowHeight, "Guided Research", 4, 4, false);
 	glewInit();
-	glViewport(0, 0, charWidth, charHeight);
+	glViewport(0, 0, windowWidth, windowHeight);
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	const GLint fieldWidth = 1000;
-	const GLint fieldHeight = 800;
+	// Scalar field setup and generation
+	/*GLint fieldWidth = 100;
+	GLint fieldHeight = 400; */
+	GLint fieldWidth = 1000;
+	GLint fieldHeight = 800;
 	// Value we'd need to use after retrieving the image from OpenGL (column-major) to C++ (row-major).
-	const GLint fieldWidthPerm = fieldHeight;
+	GLint fieldWidthPerm = fieldHeight;
 	// Value we'd need to use after retrieving the image from OpenGL (column-major) to C++ (row-major).
-	const GLint fieldHeightPerm = fieldWidth;
-	const glm::vec2 xDomain(-8.f, 8.f);
-	const glm::vec2 yDomain(-3.f, 3.f);
+	GLint fieldHeightPerm = fieldWidth;
+	glm::vec2 xDomain(-8.f, 8.f);
+	glm::vec2 yDomain(-3.f, 3.f);
 	GLfloat* scalarField = nullptr; // TODO: don't forget to remove in the end
 	generateScalarField(scalarField, fieldWidthPerm, fieldHeightPerm, xDomain.x, yDomain.x, xDomain.y, yDomain.y);
 
-	LabelingManager labelingManager(fieldWidth, fieldHeight, xDomain, yDomain, scalarField);
+	LabelingManager labelingManager(fieldWidth, fieldHeight, scalarField);
 
-	measure_start(1)
-	//produceLabeledContour(5, .05f, .1f, .7f, computeProgram, contourTex, window, renderer);
-	//produceLabeledContour(5, .05f, .1f, .6f, computeProgram, contourTex, window, renderer);
-	//labelingManager.clearData();
+	// Performance test
+	measure_start(50)
+	labelingManager.clearData();
 	labelingManager.produceLabeledContour(5, .05f, .1f, .5f);
 	labelingManager.produceLabeledContour(4, .05f, .1f, .4f);
 	labelingManager.produceLabeledContour(5, .05f, .1f, .9f);
-	measure_end
 	labelingManager.renderContours();
 	labelingManager.renderLabels();
 	glfwSwapBuffers(window);
+	// Optional test on dynamic scalar field size
+	/*const glm::vec2 xDomain(-5.f, 8.f);
+	const glm::vec2 yDomain(-3.f, 3.f);
+	fieldWidth = 100;
+	fieldHeight = 100;
+	delete[] scalarField;
+	generateScalarField(scalarField, fieldHeight, fieldWidth, xDomain.x, yDomain.x, xDomain.y, yDomain.y);
+	labelingManager.updateScalarFieldSize(scalarField, fieldWidth, fieldHeight);
+	labelingManager.produceLabeledContour(5, .05f, .1f, .3f);
+	labelingManager.produceLabeledContour(4, .05f, .1f, .7f);
+	labelingManager.produceLabeledContour(5, .05f, .1f, .9f);*/
+	measure_end
+	/*labelingManager.renderContours();
+	labelingManager.renderLabels();
+	glfwSwapBuffers(window);*/
 
 	system("pause");
 	glfwTerminate();

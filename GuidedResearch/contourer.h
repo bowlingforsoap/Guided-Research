@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "line.h"
-#include "renderer.h"
 
 using namespace std;
 
@@ -13,6 +12,7 @@ using namespace std;
 #define to1D(i,j) ((i) * fieldHeight * 2 + j)
 
 class Contourer {
+	friend class LabelingManager;
 private:
 	GLint fieldWidth;
 	GLint fieldHeight;

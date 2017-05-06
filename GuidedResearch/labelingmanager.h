@@ -1,7 +1,6 @@
 ﻿#pragma once
 
-#include <util/GLFWinitializer.h>
-#include <util/Shader.h>
+#include "shader.h"
 #include <SOIL.h>
 
 #include <iomanip>      // std::setprecision
@@ -10,7 +9,6 @@
 #include "contourer.h"
 #include "labeler.h"
 #include "renderer.h"
-#include "meausrement.h"
 
 class LabelingManager {
 private:
@@ -18,23 +16,29 @@ private:
 	Renderer renderer;
 
 	GLfloat* scalarField;
-	GLint fieldWidth;// = 100;
-	GLint fieldHeight;// = 100;
+	GLint fieldWidth;
+	GLint fieldHeight;
 	// Value we'd need to use after retrieving the image from OpenGL (column-major) to C++ (row-major).
 	GLint fieldWidthPerm;// = fieldHeight;
 	// Value we'd need to use after retrieving the image from OpenGL (column-major) to C++ (row-major).
 	GLint fieldHeightPerm;// = fieldWidth;
-	// Left and right domain boundaries
-	//const glm::vec2 xDomain(-.5f, 3.5f);
-	//const glm::vec2 yDomain(-2.f, 2.f);
-	glm::vec2 xDomain;// (-8.f, 8.f);
-	glm::vec2 yDomain;// (-3.f, 3.f);
 
 	GLuint computeProgram;
 	GLuint contourTex;
+	GLuint scalarFieldTex;
 
 	vector<vector<vector<Point>>> contours;
 	vector<Labeler::Label> addedLabels;
+
+	void setFieldWidth(const GLint fieldWidth) {
+		this->fieldWidth = fieldWidth;
+		this->fieldHeightPerm = fieldWidth;
+	}
+
+	void setFieldHeight(const GLint fieldHeight) {
+		this->fieldHeight = fieldHeight;
+		this->fieldWidthPerm = fieldHeight;
+	}
 
 	void setup() {
 		// Setup compute shader
@@ -59,22 +63,17 @@ private:
 
 		// Store scalar field into a texture
 		glActiveTexture(GL_TEXTURE0);
-		GLuint scalarFieldTex;
 		glGenTextures(1, &scalarFieldTex);
 		glBindTexture(GL_TEXTURE_2D, scalarFieldTex);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, fieldWidth, fieldHeight, 0, GL_RED, GL_FLOAT, scalarField);
 		glBindImageTexture(0, scalarFieldTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32F);
 		glBindTexture(GL_TEXTURE_2D, 0);
-		GL_ERROR_CHECK;
-		// TODO: is this needed?
-		delete[] scalarField;
 
 		// Setup the output image for the texture
 		glActiveTexture(GL_TEXTURE1);
-		//GLfloat dummyArray[2]{ dummyValue, dummyValue };
 		glGenTextures(1, &contourTex);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
-		glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RG32F, fieldWidth, fieldHeight, 4); // TODO: change to glTexImage3D
+		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RG32F, fieldWidth, fieldHeight, 4, 0, GL_RG, GL_FLOAT, nullptr); // TODO: change to glTexImage3D
 		glBindImageTexture(1, contourTex, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RG32F);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
@@ -86,8 +85,9 @@ private:
 	}
 
 public:
-	// After constructor finished the scalarField pointer's data is deleted. TODO: should this happen? 
-	LabelingManager(GLint fieldWidth, GLint fieldHeight, glm::vec2 xDomain, glm::vec2 yDomain, GLfloat* scalarField/*, Contourer&& contourer*/) : fieldWidth(fieldWidth), fieldHeight(fieldHeight), fieldWidthPerm(fieldHeight), fieldHeightPerm(fieldWidth), xDomain(xDomain), yDomain(yDomain), scalarField(scalarField), contourer(fieldHeight, fieldWidth) {
+	LabelingManager(GLint fieldWidth, GLint fieldHeight, GLfloat* scalarField) : scalarField(scalarField), contourer(fieldHeight, fieldWidth) {
+		setFieldWidth(fieldWidth);
+		setFieldHeight(fieldHeight);
 		setup();
 	}
 
@@ -191,5 +191,34 @@ public:
 	void clearData() {
 		contours.clear(); 
 		addedLabels.clear();
+	}
+
+	// Swap scalar field for a different scalar field of the same size.
+	void swapScalarField(GLfloat* scalarField) {
+		this->scalarField = scalarField;
+	}
+
+	// Swap scalar field for a different scalar field of a different size.
+	void updateScalarFieldSize(GLfloat* scalarField, const GLint newFieldWidth, const GLint newFieldHeight) {
+		clearData();
+
+		this->scalarField = scalarField;
+		setFieldWidth(newFieldWidth);
+		setFieldHeight(newFieldHeight);
+
+		contourer.fieldWidth = newFieldWidth;
+		contourer.fieldHeight = newFieldHeight;
+
+		// Update scalar field texture
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, scalarFieldTex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, fieldWidth, fieldHeight, 0, GL_RED, GL_FLOAT, scalarField);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		// Update the output image for the texture
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, contourTex);
+		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RG32F, fieldWidth, fieldHeight, 4, 0, GL_RG, GL_FLOAT, nullptr);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 	}
 };

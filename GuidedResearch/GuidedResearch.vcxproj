@@ -131,13 +131,18 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="contourer.h" />
+    <ClInclude Include="GLFWinitializer.h" />
     <ClInclude Include="labeler.h" />
     <ClInclude Include="labelingmanager.h" />
     <ClInclude Include="line.h" />
-    <ClInclude Include="main.h" />
     <ClInclude Include="meausrement.h" />
     <ClInclude Include="point.h" />
     <ClInclude Include="renderer.h" />
+    <ClInclude Include="shader.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
+    <None Include="ClassDiagram1.cd" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

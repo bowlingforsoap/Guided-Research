@@ -35,17 +35,28 @@
     <ClInclude Include="point.h">
       <Filter>Source Files\util</Filter>
     </ClInclude>
-    <ClInclude Include="renderer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="meausrement.h">
       <Filter>Source Files\util</Filter>
-    </ClInclude>
-    <ClInclude Include="main.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="labelingmanager.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="GLFWinitializer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="shader.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="renderer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="ClassDiagram1.cd">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
