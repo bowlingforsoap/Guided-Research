@@ -164,7 +164,6 @@ public:
 		vector<LabelCharacter> chars;
 		bool straight;
 		AxisAlignedBoundingBox aabb;
-		/*debug*/ bool noPlaceFoundForContour = false;
 
 		Label() = default;
 
@@ -316,11 +315,6 @@ public:
 						glm::vec4 transfPoint = transf * glm::vec4(label.chars[i].obb.points[k].x, label.chars[i].obb.points[k].y, 0.f, 1.f);
 						label.chars[i].obb.points[k] = Point{ transfPoint.x, transfPoint.y };
 					}
-
-					// Debug char render
-					/*glfwSwapBuffers(window);
-					renderLabelCharacter(label.chars[i].points);
-					glfwSwapBuffers(window);*/
 
 					start = j;
 					break;
