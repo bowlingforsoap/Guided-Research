@@ -16,13 +16,10 @@ fieldCoords:[[0, width - 2], [0, height - 2]]
 // Generates scalar field (which can be placed in a texture) and texture coordinates for it.
 inline void generateScalarField(GLfloat* &scalarField, GLint charWidth, GLint charHeight, GLfloat minX, GLfloat minY, GLfloat maxX, GLfloat maxY);
 
-// Debug, remove
-GLFWwindow* window;
-
 int main() {
 	// Window and GL setup
 	GLint windowWidth = 1500, windowHeight = 1500;
-	window = glfwInitialize(windowWidth, windowHeight, "Guided Research", 4, 4, false);
+	GLFWwindow* window = glfwInitialize(windowWidth, windowHeight, "Guided Research", 4, 4, false);
 	glewInit();
 	glViewport(0, 0, windowWidth, windowHeight);
 
@@ -50,86 +47,12 @@ int main() {
 	glClear(GL_COLOR_BUFFER_BIT);
 	labelingManager.clearData();
 	labelingManager.produceLabeledContour(5, .05f, .1f, .5f);
-	//labelingManager.renderContours();
-	//labelingManager.renderLabels();
-	//glfwSwapBuffers(window);
-	//// Debug
-	//glClear(GL_COLOR_BUFFER_BIT);
-
-	//labelingManager.renderContours();
-	//labelingManager.renderLabels();
-
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	//for (Labeler::Label label : labelingManager.addedLabels) {
-	//	const Point aabbPoints[]{
-	//		Point{ label.aabb.left, label.aabb.bottom },
-	//		Point{ label.aabb.left, label.aabb.top },
-	//		Point{ label.aabb.right, label.aabb.bottom },
-	//		Point{ label.aabb.right, label.aabb.top }
-	//	};
-	//	labelingManager.renderer.render2Dsmth(aabbPoints, 4, GL_TRIANGLE_STRIP, true);
-	//}
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	//glfwSwapBuffers(window);
-	//glfwSwapBuffers(window);
-	////
-	//glfwSwapBuffers(window);
-
-
 	labelingManager.produceLabeledContour(4, .05f, .1f, .4f);
-	/*labelingManager.renderContours();
-	labelingManager.renderLabels();
-	glfwSwapBuffers(window);*/
-	// Debug
-	//glClear(GL_COLOR_BUFFER_BIT);
-
-	//labelingManager.renderContours();
-	//labelingManager.renderLabels();
-
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	//for (Labeler::Label label : labelingManager.addedLabels) {
-	//	Point aabbPoints[]{
-	//		Point{ label.aabb.left, label.aabb.bottom },
-	//		Point{ label.aabb.left, label.aabb.top },
-	//		Point{ label.aabb.right, label.aabb.bottom },
-	//		Point{ label.aabb.right, label.aabb.top }
-	//	};
-	//	labelingManager.renderer.render2Dsmth(aabbPoints, 4, GL_TRIANGLE_STRIP, true);
-	//	glfwSwapBuffers(window);
-	//	glfwSwapBuffers(window);
-	//}
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	//glfwSwapBuffers(window);
-	//glfwSwapBuffers(window);
-	////
-	//glfwSwapBuffers(window);
-
 	labelingManager.produceLabeledContour(5, .05f, .1f, .9f);
 	labelingManager.renderContours();
 	labelingManager.renderLabels();
 	glfwSwapBuffers(window);
-	// Debug
-	/*glClear(GL_COLOR_BUFFER_BIT);
-
-	labelingManager.renderContours();
-	labelingManager.renderLabels();
-
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	for (Labeler::Label label : labelingManager.addedLabels) {
-		const Point aabbPoints[]{
-			Point{ label.aabb.left, label.aabb.bottom },
-			Point{ label.aabb.left, label.aabb.top },
-			Point{ label.aabb.right, label.aabb.bottom },
-			Point{ label.aabb.right, label.aabb.top }
-		};
-		labelingManager.renderer.render2Dsmth(aabbPoints, 4, GL_TRIANGLE_STRIP, true);
-		glfwSwapBuffers(window);
-		glfwSwapBuffers(window);
-	}
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glfwSwapBuffers(window);
-	glfwSwapBuffers(window);*/
-	//
+	
 	// Optional test on dynamic scalar field size
 	/*const glm::vec2 xDomain(-5.f, 8.f);
 	const glm::vec2 yDomain(-3.f, 3.f);

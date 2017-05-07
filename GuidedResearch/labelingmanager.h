@@ -10,13 +10,10 @@
 #include "labeler.h"
 #include "renderer.h"
 
-extern GLFWwindow* window;
-
 class LabelingManager {
 private:
 	Contourer contourer;
-/*Debug*/public:	Renderer renderer;
-private:
+	Renderer renderer;
 	GLfloat* scalarField;
 	GLint fieldWidth;
 	GLint fieldHeight;
@@ -30,8 +27,7 @@ private:
 	GLuint scalarFieldTex;
 
 	vector<vector<vector<Point>>> contours;
-/*Debug*/public:	vector<Labeler::Label> addedLabels;
-private:
+	vector<Labeler::Label> addedLabels;
 
 
 	void setFieldWidth(const GLint fieldWidth) {
@@ -173,7 +169,6 @@ public:
 				positionedLabel.straight = candidatePositions[0].straight;
 				Labeler::positionLabelOnLine(positionedLabel, candidatePositions[0].position);
 				positionedLabel.determineAABB();
-				positionedLabel.noPlaceFoundForContour = true; // debug
 				addedLabels.push_back(positionedLabel);
 
 			}
