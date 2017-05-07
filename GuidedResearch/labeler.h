@@ -164,6 +164,7 @@ public:
 		vector<LabelCharacter> chars;
 		bool straight;
 		AxisAlignedBoundingBox aabb;
+		/*debug*/ bool noPlaceFoundForContour = false;
 
 		Label() = default;
 

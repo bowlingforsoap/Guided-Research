@@ -10,11 +10,13 @@
 #include "labeler.h"
 #include "renderer.h"
 
+extern GLFWwindow* window;
+
 class LabelingManager {
 private:
 	Contourer contourer;
-	Renderer renderer;
-
+/*Debug*/public:	Renderer renderer;
+private:
 	GLfloat* scalarField;
 	GLint fieldWidth;
 	GLint fieldHeight;
@@ -28,7 +30,9 @@ private:
 	GLuint scalarFieldTex;
 
 	vector<vector<vector<Point>>> contours;
-	vector<Labeler::Label> addedLabels;
+/*Debug*/public:	vector<Labeler::Label> addedLabels;
+private:
+
 
 	void setFieldWidth(const GLint fieldWidth) {
 		this->fieldWidth = fieldWidth;
@@ -147,12 +151,12 @@ public:
 				Labeler::positionLabelOnLine(positionedLabel, candidatePosition.position);
 
 				// Get ready for pre-culling
-				positionedLabel.determineAABB(); // TODO: this method should not be accessible by users			
+				positionedLabel.determineAABB(); // TODO: this method should not be accessible by users
 
-												 // Check for intersections
+				// Check for intersections
 				if (!Labeler::intersect(addedLabels, positionedLabel, renderer)) {
 					candidatePositionWasFound = true;
-
+					
 					addedLabels.push_back(positionedLabel);
 
 					break;
@@ -166,8 +170,12 @@ public:
 			if (!candidatePositionWasFound &&  candidatePositions.size() > 0 /*latter happens when debugging and writing smth into the contour image*/) {
 				// Choose the first candidate position. TODO: make more sophisticated choice.
 				positionedLabel = label;
+				positionedLabel.straight = candidatePositions[0].straight;
 				Labeler::positionLabelOnLine(positionedLabel, candidatePositions[0].position);
+				positionedLabel.determineAABB();
+				positionedLabel.noPlaceFoundForContour = true; // debug
 				addedLabels.push_back(positionedLabel);
+
 			}
 		}
 
